@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 클래스 자리배치 & 모둠기 (Smart Classroom Seater & Grouper)</title>
+  <meta name="description" content="자유로운 레이아웃 설정과 소그룹 조 짜기, 강력한 비밀 제약 조건(자리 고정, 거리두기)을 제공하는 현대적이고 미려한 교사용 자리배치/모둠 편성 웹 애플리케이션">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+  <!-- html2canvas CDN for PNG saving -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfYLjYyisy5kqDYClqSg8pLdONOTQH23EQIQSCJaQ50LNQPwYC3c8SzJsjFlT4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <!-- Background Glows -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="app-container">
+    <!-- Main Header -->
+    <header class="app-header">
+      <div class="header-logo" id="app-title-trigger" style="cursor: default; user-select: none;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/><path d="M13 14h3"/></svg>
+        <h1>Smart Classroom <span class="gradient-text">Seater & Grouper</span></h1>
+      </div>
+      <p class="header-subtitle">선생님을 위한 스마트하고 감각적인 랜덤 자리배치 & 소그룹 조 짜기 통합 플랫폼</p>
+      
+      <!-- Theme Switcher Toggle -->
+      <button type="button" class="theme-toggle-btn" id="btn-theme-toggle" title="테마 전환 (라이트/다크)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon sun-icon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon moon-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </header>
+
+    <div class="main-layout">
+      <!-- Left Panel: Configuration & Inputs -->
+      <aside class="sidebar-panel card">
+        <!-- Class Group Selector Section -->
+        <section class="settings-section">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h2>학급(그룹) 관리</h2>
+          </div>
+          <div class="class-manager-wrapper">
+            <div class="select-class-row">
+              <select id="class-select" class="class-select-box" title="현재 학급 명단 그룹 변경">
+                <!-- Dynamically populated in JS -->
+              </select>
+              <button type="button" class="btn btn-secondary btn-icon-only" id="btn-delete-class" title="선택된 학급 삭제">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              </button>
+            </div>
+            
+            <div class="save-class-row">
+              <input type="text" id="new-class-name" placeholder="새 학급 이름 (예: 1학년 3반)" spellcheck="false" title="새 학급 이름">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-save-class">저장</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Student Input Section -->
+        <section class="settings-section">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h2>학생 명단 입력</h2>
+          </div>
+          <div class="input-container">
+            <textarea id="student-list" placeholder="학생 이름을 입력하세요&#10;(줄바꿈 또는 공백/쉼표로 구분)&#10;&#10;예시:&#10;김철수&#10;이영희&#10;박민수..." spellcheck="false"></textarea>
+            <div class="student-count-badge">
+              총 <span id="student-count">0</span>명 입력됨
+            </div>
+          </div>
+        </section>
+
+        <!-- Grid Layout Settings (Only visible/relevant for Seating tab, but left active) -->
+        <section class="settings-section" id="sidebar-layout-settings">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+            <h2>교실 크기 & 레이아웃</h2>
+          </div>
+
+          <div class="control-group">
+            <div class="slider-wrapper">
+              <label for="grid-rows">세로 줄 (행): <span id="rows-val">5</span>줄</label>
+              <input type="range" id="grid-rows" min="2" max="10" value="5">
+            </div>
+            <div class="slider-wrapper">
+              <label for="grid-cols">가로 줄 (열): <span id="cols-val">6</span>열</label>
+              <input type="range" id="grid-cols" min="2" max="10" value="6">
+            </div>
+          </div>
+
+          <div class="preset-wrapper">
+            <h3>자주 쓰는 배치 프리셋</h3>
+            <div class="preset-buttons">
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-6x5">6열 5줄 (30석)</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-5x6">5열 6줄 (30석)</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-pairs">3분단 짝꿍 배치</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-u-shape">디귿(U)자 배치</button>
+            </div>
+          </div>
+          
+          <div class="layout-hint">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hint-icon"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <span>오른쪽 좌석 배치표에서 개별 좌석을 클릭하면 통로(빈 공간)로 만들거나 활성화할 수 있습니다.</span>
+          </div>
+        </section>
+        
+        <!-- [NEW] Collapsible Secret Sidebar Panel -->
+        <section class="settings-section" id="secret-sidebar-panel">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon" style="color: var(--danger);"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <h2 style="color: var(--danger);">비밀 격리 제약 설정</h2>
+          </div>
+          
+          <div class="control-group">
+            <p class="layout-hint" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.15); color: var(--text-secondary); padding: 0.5rem; font-size: 0.75rem;">
+              <span><strong>자리 지정 방법:</strong> 비밀 모드 켠 채 배치표의 좌석을 클릭하여 원하는 학생을 즉시 고정해 보세요. (평소 핀 숨김)</span>
+            </p>
+          </div>
+
+          <div class="preset-wrapper">
+            <h3 style="font-size: 0.8rem; color: var(--text-secondary);">🚫 학생 간 거리두기 (기피) 등록</h3>
+            <div class="class-manager-wrapper" style="gap: 0.4rem;">
+              <select id="sep-student-1" class="class-select-box" style="padding: 0.45rem 0.6rem; font-size: 0.8rem;" title="기피 학생 1"></select>
+              <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem; font-weight: 700;">&amp;</div>
+              <select id="sep-student-2" class="class-select-box" style="padding: 0.45rem 0.6rem; font-size: 0.8rem;" title="기피 학생 2"></select>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-add-sep" style="width: 100%; margin-top: 0.25rem; background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);">규칙 추가</button>
+            </div>
+          </div>
+
+          <div class="active-rules-list" style="margin-top: 0.5rem;">
+            <h3 style="font-size: 0.8rem; color: var(--text-secondary);">현재 설정된 기피 목록 (<span id="seps-count">0</span>)</h3>
+            <ul id="seps-list-ul" class="rules-list" style="max-height: 120px;">
+              <li class="empty-placeholder">등록된 기피 쌍이 없습니다.</li>
+            </ul>
+          </div>
+        </section>
+        
+      </aside>
+
+      <!-- Right Panel: Grid & Live Preview -->
+      <main class="grid-panel card">
+        <!-- Triple Tab Switcher Header -->
+        <div class="main-tabs-nav">
+          <button type="button" class="main-tab-btn active" id="tab-btn-seating">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tab-svg-icon"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
+            <span>🪑 자리 배치</span>
+          </button>
+          <button type="button" class="main-tab-btn" id="tab-btn-groups">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tab-svg-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>👥 조 짜기</span>
+          </button>
+          <button type="button" class="main-tab-btn" id="tab-btn-picker">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tab-svg-icon"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            <span>🎲 랜덤 뽑기</span>
+          </button>
+        </div>
+
+        <!-- ================= TAB 1 VIEW: SEATING ================= -->
+        <div class="main-tab-view active" id="view-seating">
+          <div class="grid-header">
+            <div class="grid-status">
+              <span class="status-badge" id="seat-status-badge">좌석 설정: 0석 활성</span>
+              <span class="status-badge" id="diff-status-badge">대기 명단과 일치함</span>
+            </div>
+            <div class="utility-actions">
+              <button type="button" class="btn btn-icon" id="btn-reset-layout" title="레이아웃 초기화 (모두 활성화)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                <span>초기화</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- The Classroom Visual Canvas (Captured by html2canvas) -->
+          <div id="classroom-canvas" class="classroom-canvas-theme">
+            <!-- Screen/Blackboard Indicator (Front of Class) -->
+            <div class="classroom-front">
+              <div class="blackboard">
+                <span class="chalk-text">교 탁 (앞 쪽)</span>
+              </div>
+            </div>
+
+            <!-- Classroom Seat Grid -->
+            <div id="seats-grid" class="seats-grid-container">
+              <!-- Dynamically generated in JS -->
+            </div>
+          </div>
+
+          <!-- Primary Action Triggers -->
+          <div class="action-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-shuffle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-svg animated-spin"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>랜덤 자리 배치 시작</span>
+            </button>
+            
+            <div class="secondary-actions">
+              <button type="button" class="btn btn-secondary" id="btn-save-image" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <span>이미지로 저장</span>
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-copy-text" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>결과 텍스트 복사</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB 2 VIEW: GROUP MAKER ================= -->
+        <div class="main-tab-view" id="view-groups" style="display: none;">
+          <div class="group-settings-row">
+            <div class="group-slider-wrapper" style="grid-column: 1 / -1; width: 100%;">
+              <label for="group-size">한 조당 목표 인원수: <span id="group-size-val">4</span>명</label>
+              <input type="range" id="group-size" min="2" max="10" value="4">
+            </div>
+          </div>
+
+          <!-- Group Visual Canvas (Captured by html2canvas) -->
+          <div id="group-canvas" class="group-canvas-theme">
+            <div class="group-front">
+              <div class="group-blackboard">
+                <span class="chalk-text">👥 조 편성 결과표</span>
+              </div>
+            </div>
+
+            <!-- Group Grid container -->
+            <div id="groups-board" class="groups-board-container">
+              <div class="group-empty-placeholder">
+                <p>왼쪽에서 학생 명단을 등록하고 아래 [조 짜기 시작]을 누르세요!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group Action Footer -->
+          <div class="action-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-group-shuffle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-svg animated-spin"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>조 짜기 시작</span>
+            </button>
+            
+            <div class="secondary-actions">
+              <button type="button" class="btn btn-secondary" id="btn-group-save-image" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <span>이미지로 저장</span>
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-group-copy-text" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>결과 텍스트 복사</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB 3 VIEW: RANDOM SELECTOR ================= -->
+        <div class="main-tab-view" id="view-picker" style="display: none;">
+          <div class="group-settings-row">
+            <div class="group-slider-wrapper" style="grid-column: 1 / -1; width: 100%;">
+              <label for="picker-count">추첨 인원수: <span id="picker-count-val">1</span>명</label>
+              <input type="range" id="picker-count" min="1" max="10" value="1">
+            </div>
+          </div>
+
+          <!-- Picker Visual Canvas (Captured by html2canvas) -->
+          <div id="picker-canvas" class="group-canvas-theme">
+            <div class="group-front">
+              <div class="group-blackboard">
+                <span class="chalk-text">🎲 랜덤 추첨 결과판</span>
+              </div>
+            </div>
+
+            <!-- Picker Board Container -->
+            <div id="picker-board" class="groups-board-container" style="min-height: 240px; display: flex; align-items: center; justify-content: center;">
+              <div class="group-empty-placeholder" style="width: 100%;">
+                <p>왼쪽에서 학생 명단을 등록하고 아래 [추첨 시작]을 누르세요!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Picker Action Footer -->
+          <div class="action-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-picker-start">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span>추첨 시작</span>
+            </button>
+            
+            <div class="secondary-actions">
+              <button type="button" class="btn btn-secondary" id="btn-picker-copy-text" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>결과 텍스트 복사</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+
+
+  <!-- Custom Alert Toast -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>

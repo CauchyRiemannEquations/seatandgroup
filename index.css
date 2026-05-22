@@ -1701,4 +1701,24 @@ body.light-theme .seat-lock-select {
   }
 }
 
+/* 16. html2canvas 캡처 시 강제 오버라이드 */
+body.html2canvas-capturing #classroom-canvas,
+body.html2canvas-capturing .group-canvas-theme {
+  overflow: visible !important;
+  height: auto !important;
+}
 
+body.html2canvas-capturing .groups-board-container,
+body.html2canvas-capturing .seats-grid-container {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body.html2canvas-capturing .group-table-card,
+body.html2canvas-capturing .seat-card,
+body.html2canvas-capturing .group-member-item {
+  animation: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}

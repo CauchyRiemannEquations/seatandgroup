@@ -1,1684 +1,284 @@
-/* ==========================================
-   스마트 클래스 자리배치 & 모둠기 - index.css
-   Modern Glassmorphism & Light/Dark Theme System
-   ========================================== */
-
-/* 1. 디자인 토큰 및 루트 변수 (기본값: 다크 테마 - 클래식 라이브러리 다크) */
-:root {
-  --font-primary: 'Outfit', 'Noto Sans KR', sans-serif;
-  
-  /* 다크 테마 변수 (Charcoal Wood & Amber) */
-  --bg-main: #141312;
-  --bg-gradient: linear-gradient(135deg, #141312 0%, #1e1c1a 100%);
-  --accent-color: #d97706;
-  --accent-color-rgb: 217, 119, 6;
-  --accent-secondary: #b45309;
-  --accent-gradient: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  
-  --glass-bg: rgba(35, 33, 31, 0.95);
-  --glass-bg-hover: rgba(48, 45, 42, 0.98);
-  --glass-border: #3d352e;
-  --glass-border-focus: #d97706;
-  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  
-  --text-primary: #f7f5f3;
-  --text-secondary: #c5beb6;
-  --text-muted: #8c8278;
-  --text-accent: #d97706;
-  
-  --seat-active-bg: #2c2825;
-  --seat-active-border: #4a433e;
-  --seat-assigned-bg: linear-gradient(135deg, #3d352e 0%, #2f2721 100%);
-  --seat-assigned-border: #785028;
-  --seat-disabled-bg: rgba(35, 33, 31, 0.3);
-  --seat-disabled-border: rgba(61, 53, 46, 0.4);
-  
-  --success: #84cc16; /* 차분한 그린 */
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --glow-opacity: 0.15;
-}
-
-/* 2. 라이트 테마 변수 오버라이드 (코지 아카데믹 라이트 - Oatmeal Cream & Sage Oak) */
-body.light-theme {
-  --bg-main: #fdfcfb;
-  --bg-gradient: linear-gradient(135deg, #fdfcfb 0%, #f4f2eb 100%);
-  
-  --glass-bg: #ffffff;
-  --glass-bg-hover: #faf9f6;
-  --glass-border: #bbb5a8; /* 아주 또렷한 갈색빛 회색 경계선으로 조 카드 등이 눈에 선명히 띔 */
-  --glass-border-focus: #4a5c39;
-  --glass-shadow: 0 8px 30px rgba(84, 79, 72, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
-  
-  --text-primary: #252422; /* 텍스트 가독성 최적화를 위해 살짝 더 어둡게 */
-  --text-secondary: #48433d;
-  --text-muted: #827b72;
-  --text-accent: #4a5c39; /* 차분한 세이지 그린 어두운 톤 */
-  --accent-gradient: linear-gradient(135deg, #5c7a43 0%, #4a5c39 100%);
-  --accent-color: #5c7a43;
-  --accent-secondary: #8b5a2b;
-  
-  --seat-active-bg: #f8f7f2;
-  --seat-active-border: #999384; /* 활성 빈 자리 점선 테두리를 훨씬 또렷하고 짙게 변경 */
-  --seat-assigned-bg: linear-gradient(135deg, #f0f3eb 0%, #dae3d2 100%);
-  --seat-assigned-border: #6d805f; /* 배치 완료 자리 테두리를 더 선명하고 묵직한 Sage 세이지 그린으로 강화 */
-  --seat-disabled-bg: #e6e3da;
-  --seat-disabled-border: #b0ab9b; /* 통로(비활성) 점선 테두리 강화 */
-  
-  --glow-opacity: 0.05;
-}
-
-/* 3. 전역 스타일 & 배경 */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: var(--font-primary);
-  background-color: var(--bg-main);
-  background-image: var(--bg-gradient);
-  color: var(--text-primary);
-  min-height: 100vh;
-  overflow-x: hidden;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 2rem 1rem;
-  transition: background-color 0.4s ease, background-image 0.4s ease, color 0.4s ease;
-}
-
-/* Ambient Glows */
-.bg-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  z-index: 0;
-  pointer-events: none;
-  opacity: var(--glow-opacity);
-  transition: opacity 0.4s ease;
-}
-
-.bg-glow-1 {
-  width: 450px;
-  height: 450px;
-  background: var(--accent-color);
-  top: -100px;
-  right: -50px;
-}
-
-.bg-glow-2 {
-  width: 550px;
-  height: 550px;
-  background: var(--accent-secondary);
-  bottom: -150px;
-  left: -100px;
-}
-
-/* 4. 컨테이너 및 헤더 */
-.app-container {
-  width: 100%;
-  max-width: 1440px;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.app-header {
-  position: relative;
-  text-align: center;
-  margin-bottom: 0.5rem;
-  padding: 0 4rem;
-}
-
-.header-logo {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.25rem;
-}
-
-.logo-icon {
-  width: 2.2rem;
-  height: 2.2rem;
-  color: var(--text-accent);
-}
-
-.app-header h1 {
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.gradient-text {
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.header-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  font-weight: 400;
-  letter-spacing: 0.05em;
-}
-
-/* 테마 토글 버튼 */
-.theme-toggle-btn {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: var(--glass-shadow);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.theme-toggle-btn:hover {
-  transform: translateY(-50%) scale(1.1);
-  border-color: var(--text-accent);
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
-}
-
-.theme-icon {
-  width: 1.3rem;
-  height: 1.3rem;
-  position: absolute;
-  transition: transform 0.4s ease, opacity 0.3s ease;
-}
-
-/* 기본값: 다크모드이므로 해(Light)가 보이고 달(Dark)이 감춰짐 */
-body:not(.light-theme) .sun-icon {
-  opacity: 1;
-  transform: rotate(0deg) scale(1);
-}
-body:not(.light-theme) .moon-icon {
-  opacity: 0;
-  transform: rotate(90deg) scale(0.5);
-}
-
-/* 라이트모드 상태: 달(Dark)이 보이고 해(Light)가 감춰짐 */
-body.light-theme .sun-icon {
-  opacity: 0;
-  transform: rotate(-90deg) scale(0.5);
-}
-body.light-theme .moon-icon {
-  opacity: 1;
-  transform: rotate(0deg) scale(1);
-}
-
-/* 5. 메인 레이아웃 및 카드 */
-.main-layout {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 1.5rem;
-  width: 100%;
-}
-
-@media (max-width: 992px) {
-  .main-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: 1.25rem;
-  box-shadow: var(--glass-shadow);
-  padding: 1.75rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.4s ease;
-}
-
-.sidebar-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 0.6rem;
-}
-
-body.light-theme .section-title {
-  border-bottom-color: rgba(0, 0, 0, 0.05);
-}
-
-.section-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  color: var(--text-accent);
-}
-
-.section-title h2 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-/* 6. 학급(그룹) 관리 컴포넌트 */
-.class-manager-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.select-class-row {
-  display: flex;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.class-select-box {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--glass-border);
-  border-radius: 0.6rem;
-  padding: 0.6rem 0.8rem;
-  color: var(--text-primary);
-  font-family: var(--font-primary);
-  font-size: 0.85rem;
-  font-weight: 600;
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-body.light-theme .class-select-box {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.class-select-box:focus {
-  border-color: var(--glass-border-focus);
-}
-
-.btn-icon-only {
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.save-class-row {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.save-class-row input {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--glass-border);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  color: var(--text-primary);
-  font-family: var(--font-primary);
-  font-size: 0.8rem;
-  outline: none;
-}
-
-body.light-theme .save-class-row input {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.save-class-row input:focus {
-  border-color: var(--glass-border-focus);
-}
-
-/* 7. 학생 명단 입력 */
-.input-container {
-  position: relative;
-  width: 100%;
-}
-
-textarea#student-list {
-  width: 100%;
-  height: 150px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--glass-border);
-  border-radius: 0.75rem;
-  padding: 0.85rem;
-  color: var(--text-primary);
-  font-family: var(--font-primary);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  resize: none;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-body.light-theme textarea#student-list {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-textarea#student-list:focus {
-  border-color: var(--glass-border-focus);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
-}
-
-.student-count-badge {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background: var(--accent-gradient);
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: 9999px;
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
-}
-
-/* 슬라이더 및 프리셋 제어 */
-.control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.slider-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.slider-wrapper label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  display: flex;
-  justify-content: space-between;
-}
-
-.slider-wrapper label span {
-  font-weight: 700;
-  color: var(--text-accent);
-}
-
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.08);
-  outline: none;
-}
-
-body.light-theme input[type="range"] {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent-gradient);
-  cursor: pointer;
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
-}
-
-/* 프리셋 버튼 */
-.preset-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.preset-wrapper h3 {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.preset-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
-}
-
-/* 버튼 정의 */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  font-family: var(--font-primary);
-  font-weight: 600;
-  border-radius: 0.6rem;
-  border: 1px solid transparent;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-primary {
-  background: var(--accent-gradient);
-  color: #ffffff;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  border-color: var(--glass-border);
-}
-
-body.light-theme .btn-secondary {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.btn-secondary:hover {
-  background: var(--glass-bg-hover);
-  border-color: rgba(0, 0, 0, 0.15);
-}
-
-.btn-sm {
-  font-size: 0.75rem;
-  padding: 0.45rem 0.6rem;
-}
-
-.btn-lg {
-  font-size: 1rem;
-  padding: 0.85rem 1.5rem;
-  border-radius: 0.75rem;
-}
-
-.btn-icon {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-}
-
-.btn-svg {
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
-.layout-hint {
-  display: flex;
-  gap: 0.4rem;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  background: rgba(99, 102, 241, 0.05);
-  border: 1px dashed rgba(99, 102, 241, 0.15);
-  padding: 0.6rem;
-  border-radius: 0.5rem;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-align: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.03);
-  padding-top: 0.75rem;
-}
-
-body.light-theme .sidebar-footer {
-  border-top-color: rgba(0, 0, 0, 0.04);
-}
-
-/* 8. 메인 격자 대형 탭바 */
-.main-tabs-nav {
-  display: flex;
-  gap: 0.75rem;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-body.light-theme .main-tabs-nav {
-  border-bottom-color: rgba(0, 0, 0, 0.04);
-}
-
-.main-tab-btn {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--glass-border);
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  color: var(--text-secondary);
-  font-family: var(--font-primary);
-  font-weight: 700;
-  font-size: 0.9rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-body.light-theme .main-tab-btn {
-  background: rgba(0, 0, 0, 0.01);
-  color: var(--text-secondary);
-}
-
-.main-tab-btn.active,
-body.light-theme .main-tab-btn.active {
-  background: var(--accent-gradient);
-  color: #ffffff;
-  border-color: transparent;
-  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);
-}
-
-.main-tab-btn:not(.active):hover,
-body.light-theme .main-tab-btn:not(.active):hover {
-  background: var(--glass-bg-hover);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.tab-svg-icon {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-
-.main-tab-view {
-  display: none;
-  flex-direction: column;
-  gap: 1.25rem;
-  flex: 1;
-}
-
-.main-tab-view.active {
-  display: flex;
-}
-
-/* 9. 교실 자리배치 뷰 전용 스타일 */
-.grid-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 650px;
-}
-
-.grid-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.grid-status {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.status-badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0.3rem 0.6rem;
-  border-radius: 0.4rem;
-}
-
-body.light-theme .status-badge {
-  background: rgba(0, 0, 0, 0.03);
-  border-color: rgba(0, 0, 0, 0.06);
-}
-
-#classroom-canvas, .group-canvas-theme {
-  flex: 1;
-  background: rgba(10, 10, 15, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 1rem;
-  padding: 1.75rem 1.25rem 1.25rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
-
-body.light-theme #classroom-canvas,
-body.light-theme .group-canvas-theme {
-  background: rgba(255, 255, 255, 0.98);
-  border: 2px solid #ccc7b9; /* 칠판 영역/조배치 캔버스 영역의 전체 경계를 굵고 진하게 표현 */
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.03);
-}
-
-/* 칠판 & 교탁 인디케이터 */
-.classroom-front, .group-front {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-.blackboard, .group-blackboard {
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  border: 4px solid #334155;
-  border-radius: 0.5rem;
-  width: 280px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-  position: relative;
-}
-
-body.light-theme .blackboard,
-body.light-theme .group-blackboard {
-  background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-  border-color: #475569;
-}
-
-.blackboard::after, .group-blackboard::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 20px;
-  right: 20px;
-  height: 4px;
-  background: #f59e0b;
-  border-radius: 2px;
-}
-
-.chalk-text {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.35em;
-  padding-left: 0.35em;
-}
-
-/* 10. 좌석 및 배치표 그리드 */
-.seats-grid-container {
-  display: grid;
-  gap: 0.6rem;
-  width: 100%;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-}
-
-.seat-card {
-  aspect-ratio: 1.4 / 1;
-  min-height: 58px;
-  border-radius: 0.6rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  user-select: none;
-}
-
-.seat-card.active {
-  background: var(--seat-active-bg);
-  border: 1.5px dashed var(--seat-active-border);
-  color: var(--text-secondary);
-}
-
-.seat-card.active:hover {
-  transform: translateY(-3px) scale(1.02);
-  background: rgba(99, 102, 241, 0.15);
-  border-color: var(--accent-color);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-}
-
-.seat-card.disabled {
-  background: var(--seat-disabled-bg);
-  border: 1.5px dotted var(--seat-disabled-border);
-  color: var(--text-muted);
-}
-
-.seat-card.assigned {
-  background: var(--seat-assigned-bg);
-  border: 1.5px solid var(--seat-assigned-border);
-  box-shadow: 0 4px 10px rgba(168, 85, 247, 0.08);
-  color: var(--text-primary);
-}
-
-body.light-theme .seat-card.assigned {
-  box-shadow: 0 4px 8px rgba(147, 51, 234, 0.05);
-}
-
-.seat-card.assigned:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent-secondary);
-  box-shadow: 0 6px 15px rgba(168, 85, 247, 0.15);
-}
-
-.seat-card.assigned.empty-seat {
-  background: rgba(255, 255, 255, 0.01) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.05) !important;
-  box-shadow: none !important;
-}
-
-body.light-theme .seat-card.assigned.empty-seat {
-  background: rgba(0, 0, 0, 0.02) !important;
-  border-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-.seat-card.assigned.empty-seat .student-name {
-  color: var(--text-muted);
-  font-weight: 400;
-  opacity: 0.35;
-}
-
-.seat-index {
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  margin-bottom: 0.15rem;
-}
-
-.student-name {
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--text-primary);
-}
-
-.pin-indicator {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 13px;
-  height: 13px;
-  color: #f43f5e;
-}
-
-/* 11. 소그룹 조 짜기 뷰 전용 스타일 */
-.group-settings-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px dashed var(--glass-border);
-  padding: 1rem;
-  border-radius: 0.85rem;
-}
-
-body.light-theme .group-settings-row {
-  background: rgba(0, 0, 0, 0.01);
-  border-color: rgba(0, 0, 0, 0.06);
-}
-
-@media (max-width: 768px) {
-  .group-settings-row {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-}
-
-.group-slider-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.group-slider-wrapper label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  display: flex;
-  justify-content: space-between;
-  font-weight: 600;
-}
-
-.group-slider-wrapper label span {
-  color: var(--text-accent);
-  font-weight: 800;
-}
-
-.group-options-box {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* 조 짜기 대형 보드판 */
-.groups-board-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  width: 100%;
-  flex: 1;
-  overflow-y: auto;
-  align-content: start;
-  max-height: 480px;
-  padding: 0.25rem;
-}
-
-.group-empty-placeholder {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 240px;
-  color: var(--text-muted);
-  font-style: italic;
-  font-size: 0.9rem;
-  border: 2px dashed var(--glass-border);
-  border-radius: 0.75rem;
-}
-
-/* 개별 조(그룹) 테이블 카드 */
-.group-table-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--glass-border);
-  border-radius: 0.85rem;
-  overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  animation: group-card-fade-in 0.4s cubic-bezier(0, 0, 0.2, 1);
-}
-
-body.light-theme .group-table-card {
-  background: #ffffff;
-  border: 1.5px solid var(--glass-border); /* 선명한 카드 경계선 부여 */
-  box-shadow: 0 4px 12px rgba(84, 79, 72, 0.06);
-}
-
-.group-table-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--text-accent);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
-}
-
-@keyframes group-card-fade-in {
-  0% { transform: translateY(15px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-.group-table-header {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
-  border-bottom: 1px solid var(--glass-border);
-  padding: 0.6rem 0.85rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.group-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-}
-
-.group-members-count {
-  font-size: 0.7rem;
-  font-weight: 700;
-  background: var(--accent-gradient);
-  color: white;
-  padding: 0.15rem 0.4rem;
-  border-radius: 9999px;
-}
-
-.group-members-list {
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  list-style: none;
-  flex: 1;
-}
-
-.group-member-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.5rem 0.85rem;
-  border-radius: 0.5rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-body.light-theme .group-member-item {
-  background: #faf9f6;
-  border-color: #dcd8cd; /* 조원 개별 칸 테두리 식별성 강화 */
-}
-
-.member-icon {
-  width: 0.8rem;
-  height: 0.8rem;
-  color: var(--text-accent);
-}
-
-/* 12. 공통 액션 및 셔플 */
-.action-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.secondary-actions {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.seat-card.shuffle-roll {
-  animation: card-shake 0.15s infinite alternate;
-}
-
-.seat-card.shuffle-roll .student-name {
-  filter: blur(1.5px);
-  color: var(--text-accent);
-}
-
-@keyframes card-shake {
-  0% { transform: translate(1px, 1px) rotate(0deg); }
-  100% { transform: translate(-1px, -1px) rotate(0.5deg); }
-}
-
-.group-table-card.group-shuffling {
-  animation: group-pulse 0.2s infinite alternate;
-}
-
-@keyframes group-pulse {
-  0% { transform: scale(0.99); border-color: var(--glass-border); }
-  100% { transform: scale(1.01); border-color: var(--accent-secondary); }
-}
-
-/* 13. 모달 관련 스타일링 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(5, 5, 8, 0.85);
-  backdrop-filter: blur(8px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.modal-overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.modal-card {
-  width: 90%;
-  max-width: 580px;
-  background: rgba(20, 20, 35, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transform: translateY(20px);
-  transition: transform 0.3s ease;
-}
-
-body.light-theme .modal-card {
-  background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
-}
-
-.modal-overlay.open .modal-card {
-  transform: translateY(0);
-}
-
-.modal-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-body.light-theme .modal-header {
-  border-bottom-color: rgba(0, 0, 0, 0.06);
-}
-
-.modal-logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.modal-logo-icon {
-  width: 1.3rem;
-  height: 1.3rem;
-  color: var(--accent-secondary);
-}
-
-.modal-header h2 {
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.btn-close-modal {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.75rem;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.modal-body {
-  padding: 1.5rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.lock-screen {
-  align-items: center;
-  text-align: center;
-  padding: 2.5rem 1.5rem;
-}
-
-.lock-desc {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  margin-bottom: 1.25rem;
-}
-
-.password-input-group {
-  display: flex;
-  gap: 0.5rem;
-  width: 100%;
-  max-width: 320px;
-}
-
-.password-input-group input {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--glass-border);
-  border-radius: 0.6rem;
-  padding: 0.75rem 1rem;
-  color: var(--text-primary);
-  font-size: 1rem;
-  text-align: center;
-  outline: none;
-}
-
-body.light-theme .password-input-group input {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.error-text {
-  color: var(--danger);
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.tab-buttons {
-  display: flex;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
-}
-
-body.light-theme .tab-buttons {
-  border-bottom-color: rgba(0, 0, 0, 0.04);
-}
-
-.tab-btn {
-  flex: 1;
-  background: transparent;
-  border: none;
-  padding: 0.75rem 0.5rem;
-  color: var(--text-secondary);
-  font-family: var(--font-primary);
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.2s;
-}
-
-.tab-btn.active {
-  color: var(--accent-secondary);
-  border-bottom-color: var(--accent-secondary);
-}
-
-.tab-content-container {
-  min-height: 240px;
-}
-
-.tab-content {
-  display: none;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 0.5rem 0;
-}
-
-.tab-content.active {
-  display: flex;
-}
-
-.tab-instruction {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  background: rgba(255, 255, 255, 0.02);
-  border-left: 3px solid var(--accent-secondary);
-  padding: 0.6rem 0.75rem;
-  border-radius: 0 0.4rem 0.4rem 0;
-}
-
-body.light-theme .tab-instruction {
-  background: rgba(0, 0, 0, 0.01);
-}
-
-.lock-setup-form {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.lock-setup-form select,
-.select-pair select {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--glass-border);
-  border-radius: 0.5rem;
-  padding: 0.6rem;
-  color: var(--text-primary);
-  outline: none;
-}
-
-body.light-theme .lock-setup-form select,
-body.light-theme .select-pair select {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.vs-text {
-  color: var(--text-muted);
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.active-rules-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.active-rules-list h3 {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.rules-list {
-  list-style: none;
-  max-height: 110px;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-body.light-theme .rules-list {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.04);
-}
-
-.rules-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.45rem 0.75rem;
-  font-size: 0.8rem;
-}
-
-.btn-delete-rule {
-  background: transparent;
-  border: none;
-  color: var(--danger);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.modal-footer-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 1rem;
-}
-
-body.light-theme .modal-footer-settings {
-  border-top-color: rgba(0, 0, 0, 0.06);
-}
-
-.toggle-switch-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.switch-label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-/* 토글 슬라이더 */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 42px;
-  height: 22px;
-  flex-shrink: 0;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider.round {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.1);
-  transition: .3s;
-  border-radius: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-body.light-theme .slider.round {
-  background-color: rgba(0, 0, 0, 0.08);
-  border-color: rgba(0, 0, 0, 0.03);
-}
-
-.slider.round:before {
-  position: absolute;
-  content: "";
-  height: 14px;
-  width: 14px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: .3s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: var(--accent-secondary);
-}
-
-input:checked + .slider:before {
-  transform: translateX(20px);
-}
-
-/* 토스트 알림 */
-.toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  z-index: 9999;
-}
-
-.toast {
-  background: rgba(20, 20, 30, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.6rem 1.1rem;
-  border-radius: 0.5rem;
-  color: var(--text-primary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  animation: slide-in-toast 0.25s cubic-bezier(0, 0, 0.2, 1);
-  transition: opacity 0.2s;
-}
-
-body.light-theme .toast {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.05);
-  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.08);
-}
-
-.toast.success { border-left: 4px solid var(--success); }
-.toast.warning { border-left: 4px solid var(--warning); }
-.toast.danger { border-left: 4px solid var(--danger); }
-
-@keyframes slide-in-toast {
-  0% { transform: translateX(100%); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
-}
-
-/* ============================================================================
-   14. 랜덤 뽑기 모듈 (Random Picker) & 골든 티켓 (Golden Ticket)
-   ============================================================================ */
-
-.picker-golden-ticket {
-  position: relative;
-  background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 50%, #f59e0b 100%);
-  color: #78350f !important;
-  border: 2px solid #d97706;
-  border-radius: 0.85rem;
-  padding: 1.5rem 1.25rem;
-  box-shadow: 0 10px 25px rgba(217, 119, 6, 0.18), inset 0 0 15px rgba(255, 255, 255, 0.5);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: 140px;
-  animation: ticket-flip-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  user-select: none;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.picker-golden-ticket:hover {
-  transform: translateY(-5px) scale(1.03);
-  box-shadow: 0 15px 30px rgba(217, 119, 6, 0.28), inset 0 0 15px rgba(255, 255, 255, 0.7);
-}
-
-/* 티켓 사이드 반원 홈 (Notches) */
-.picker-golden-ticket::before,
-.picker-golden-ticket::after {
-  content: '';
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  background: var(--bg-main);
-  border-radius: 50%;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  transition: background-color 0.4s ease;
-}
-
-.picker-golden-ticket::before {
-  left: -9px;
-  box-shadow: inset -2px 0 0 #d97706;
-}
-
-.picker-golden-ticket::after {
-  right: -9px;
-  box-shadow: inset 2px 0 0 #d97706;
-}
-
-/* 미세 점선 테두리 디자인으로 티켓 느낌 극대화 */
-.picker-golden-ticket-inner {
-  border: 1px dashed rgba(120, 53, 15, 0.3);
-  width: 100%;
-  height: 100%;
-  border-radius: 0.5rem;
-  padding: 0.75rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 롤링 중 상태 */
-.picker-golden-ticket.rolling {
-  background: linear-gradient(135deg, #f5f4ef 0%, #e5e3da 100%);
-  color: var(--text-secondary) !important;
-  border-color: var(--glass-border);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  animation: ticket-rolling-shake 0.1s infinite alternate;
-}
-
-.picker-golden-ticket.rolling::before,
-.picker-golden-ticket.rolling::after {
-  box-shadow: inset -2px 0 0 var(--glass-border);
-}
-
-.picker-golden-ticket.rolling::after {
-  box-shadow: inset 2px 0 0 var(--glass-border);
-}
-
-.picker-golden-ticket.rolling .student-name {
-  filter: blur(1px);
-  color: var(--text-accent);
-}
-
-/* 애니메이션 정의 */
-@keyframes ticket-flip-in {
-  0% {
-    transform: rotateY(90deg) scale(0.8);
-    opacity: 0;
-  }
-  100% {
-    transform: rotateY(0deg) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes ticket-rolling-shake {
-  0% { transform: translate(1px, 1px) rotate(0.5deg); }
-  100% { transform: translate(-1px, -1px) rotate(-0.5deg); }
-}
-
-/* ============================================================================
-   15. 비밀 격리 제약 설정 사이드바 패널 & 인라인 고정 선택창
-   ============================================================================ */
-
-#secret-sidebar-panel {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease, border-color 0.3s ease;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  border-top: 1px dashed transparent !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-#secret-sidebar-panel.show {
-  max-height: 600px;
-  opacity: 1;
-  padding-top: 1.25rem !important;
-  padding-bottom: 1.25rem !important;
-  border-top: 1px dashed var(--glass-border) !important;
-  margin-top: 1rem !important;
-}
-
-/* 인라인 고정 선택 드롭다운 */
-.seat-lock-select {
-  width: 90%;
-  max-width: 120px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  color: var(--text-primary);
-  border: 1.5px solid var(--text-accent);
-  border-radius: 0.4rem;
-  padding: 0.2rem 0.4rem;
-  font-family: var(--font-primary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  outline: none;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  margin-top: 0.25rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  text-align: center;
-}
-
-body.light-theme .seat-lock-select {
-  background: #faf9f6;
-  border-color: #5a7247;
-  color: #2c2a27;
-}
-
-.seat-lock-select:focus {
-  border-color: var(--accent-secondary);
-  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);
-}
-
-/* 고정 선택 모드일 때 좌석 카드 애니메이션 */
-.seat-card.lock-selecting {
-  animation: lock-pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes lock-pulse {
-  0% { border-color: var(--seat-active-border); box-shadow: none; }
-  50% { border-color: var(--accent-secondary); box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
-  100% { border-color: var(--seat-active-border); box-shadow: none; }
-}
-
-.pin-indicator {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 13px;
-  height: 13px;
-  color: #f43f5e;
-  animation: pin-bounce-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes pin-bounce-in {
-  0% { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* ============================================================================
-   16. 모바일 및 태블릿 반응형 미디어 쿼리 (Responsive Layout Optimizations)
-   ============================================================================ */
-@media (max-width: 768px) {
-  body {
-    padding: 1rem 0.5rem;
-  }
-
-  .app-container {
-    gap: 1rem;
-  }
-
-  .app-header {
-    padding: 0 1rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .app-header h1 {
-    font-size: 1.6rem;
-  }
-
-  .logo-icon {
-    width: 1.8rem;
-    height: 1.8rem;
-  }
-
-  .header-subtitle {
-    font-size: 0.8rem;
-  }
-
-  .card {
-    padding: 1.25rem;
-    border-radius: 1rem;
-  }
-
-  /* 모바일에서 칠판/좌석 그리드 영역 가로 스크롤 가능하도록 하여 글씨 뭉개짐 방지 */
-  #classroom-canvas, 
-  .group-canvas-theme {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 1.25rem 0.75rem 0.75rem 0.75rem;
-  }
-
-  .seats-grid-container {
-    min-width: 580px; /* 모바일에서 6열 배치 등의 이름 카드가 한눈에 또렷이 보이도록 최소 가로 폭 보장 */
-  }
-
-  .classroom-front, 
-  .group-front {
-    min-width: 580px; /* 칠판 영역도 가로 스크롤 범위에 맞춰 고정 */
-  }
-  
-  /* 조 배치의 경우 모바일 세로 레이아웃 최적화 */
-  .groups-board-container {
-    grid-template-columns: 1fr; /* 모바일 조 카드는 1열로 큼직하게 배치 */
-    max-height: 520px;
-  }
-}
-
-@media (max-width: 576px) {
-  /* 하단 액션 버튼 배치 최적화 (가로폭이 너무 좁아질 때 세로 정렬 및 넓게 채우기) */
-  .action-footer {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
-  .action-footer .btn-lg {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    font-size: 0.95rem;
-  }
-
-  .secondary-actions {
-    width: 100%;
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .secondary-actions .btn {
-    flex: 1;
-    font-size: 0.8rem;
-    padding: 0.6rem 0.4rem;
-  }
-  
-  /* 테마 전환 버튼 위치 조정 */
-  .theme-toggle-btn {
-    position: relative;
-    top: auto;
-    right: auto;
-    transform: none;
-    margin: 0.5rem auto 0 auto;
-  }
-}
-
-
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 클래스 자리배치 & 모둠기 (Smart Classroom Seater & Grouper)</title>
+  <meta name="description" content="자유로운 레이아웃 설정과 소그룹 조 짜기, 강력한 비밀 제약 조건(자리 고정, 거리두기)을 제공하는 현대적이고 미려한 교사용 자리배치/모둠 편성 웹 애플리케이션">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+  <!-- html2canvas CDN for PNG saving -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfYLjYyisy5kqDYClqSg8pLdONOTQH23EQIQSCJaQ50LNQPwYC3c8SzJsjFlT4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <!-- Background Glows -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="app-container">
+    <!-- Main Header -->
+    <header class="app-header">
+      <div class="header-logo" id="app-title-trigger" style="cursor: default; user-select: none;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/><path d="M13 14h3"/></svg>
+        <h1>Smart Classroom <span class="gradient-text">Seater & Grouper</span></h1>
+      </div>
+      <p class="header-subtitle">선생님을 위한 스마트하고 감각적인 랜덤 자리배치 & 소그룹 조 짜기 통합 플랫폼</p>
+      
+      <!-- Theme Switcher Toggle -->
+      <button type="button" class="theme-toggle-btn" id="btn-theme-toggle" title="테마 전환 (라이트/다크)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon sun-icon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon moon-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </header>
+    <div class="main-layout">
+      <!-- Left Panel: Configuration & Inputs -->
+      <aside class="sidebar-panel card">
+        <!-- Class Group Selector Section -->
+        <section class="settings-section">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h2>학급(그룹) 관리</h2>
+          </div>
+          <div class="class-manager-wrapper">
+            <div class="select-class-row">
+              <select id="class-select" class="class-select-box" title="현재 학급 명단 그룹 변경">
+                <!-- Dynamically populated in JS -->
+              </select>
+              <button type="button" class="btn btn-secondary btn-icon-only" id="btn-delete-class" title="선택된 학급 삭제">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              </button>
+            </div>
+            
+            <div class="save-class-row">
+              <input type="text" id="new-class-name" placeholder="새 학급 이름 (예: 1학년 3반)" spellcheck="false" title="새 학급 이름">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-save-class">저장</button>
+            </div>
+          </div>
+        </section>
+        <!-- Student Input Section -->
+        <section class="settings-section">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h2>학생 명단 입력</h2>
+          </div>
+          <div class="input-container">
+            <textarea id="student-list" placeholder="학생 이름을 입력하세요&#10;(줄바꿈 또는 공백/쉼표로 구분)&#10;&#10;예시:&#10;김철수&#10;이영희&#10;박민수..." spellcheck="false"></textarea>
+            <div class="student-count-badge">
+              총 <span id="student-count">0</span>명 입력됨
+            </div>
+          </div>
+        </section>
+        <!-- Grid Layout Settings (Only visible/relevant for Seating tab, but left active) -->
+        <section class="settings-section" id="sidebar-layout-settings">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+            <h2>교실 크기 & 레이아웃</h2>
+          </div>
+          <div class="control-group">
+            <div class="slider-wrapper">
+              <label for="grid-rows">세로 줄 (행): <span id="rows-val">5</span>줄</label>
+              <input type="range" id="grid-rows" min="2" max="10" value="5">
+            </div>
+            <div class="slider-wrapper">
+              <label for="grid-cols">가로 줄 (열): <span id="cols-val">6</span>열</label>
+              <input type="range" id="grid-cols" min="2" max="10" value="6">
+            </div>
+          </div>
+          <div class="preset-wrapper">
+            <h3>자주 쓰는 배치 프리셋</h3>
+            <div class="preset-buttons">
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-6x5">6열 5줄 (30석)</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-5x6">5열 6줄 (30석)</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-pairs">3분단 짝꿍 배치</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preset-u-shape">디귿(U)자 배치</button>
+            </div>
+          </div>
+          
+          <div class="layout-hint">
+            <span>오른쪽 좌석 배치표에서 개별 좌석을 클릭하면 통로(빈 공간)로 만들거나 활성화할 수 있습니다.</span>
+          </div>
+        </section>
+        
+        <!-- [NEW] Collapsible Secret Sidebar Panel -->
+        <section class="settings-section" id="secret-sidebar-panel">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon" style="color: var(--danger);"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <h2 style="color: var(--danger);">비밀 격리 제약 설정</h2>
+          </div>
+          
+          <div class="control-group">
+            <p class="layout-hint" style="background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.15); color: var(--text-secondary); padding: 0.5rem; font-size: 0.75rem;">
+              <span><strong>자리 지정 방법:</strong> 비밀 모드 켠 채 배치표의 좌석을 클릭하여 원하는 학생을 즉시 고정해 보세요. (평소 핀 숨김)</span>
+            </p>
+          </div>
+          <div class="preset-wrapper">
+            <h3 style="font-size: 0.8rem; color: var(--text-secondary);">🚫 학생 간 거리두기 (기피) 등록</h3>
+            <div class="class-manager-wrapper" style="gap: 0.4rem;">
+              <select id="sep-student-1" class="class-select-box" style="padding: 0.45rem 0.6rem; font-size: 0.8rem;" title="기피 학생 1"></select>
+              <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem; font-weight: 700;">&amp;</div>
+              <select id="sep-student-2" class="class-select-box" style="padding: 0.45rem 0.6rem; font-size: 0.8rem;" title="기피 학생 2"></select>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-add-sep" style="width: 100%; margin-top: 0.25rem; background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);">규칙 추가</button>
+            </div>
+          </div>
+          <div class="active-rules-list" style="margin-top: 0.5rem;">
+            <h3 style="font-size: 0.8rem; color: var(--text-secondary);">현재 설정된 기피 목록 (<span id="seps-count">0</span>)</h3>
+            <ul id="seps-list-ul" class="rules-list" style="max-height: 120px;">
+              <li class="empty-placeholder">등록된 기피 쌍이 없습니다.</li>
+            </ul>
+          </div>
+        </section>
+        
+      </aside>
+      <!-- Right Panel: Grid & Live Preview -->
+      <main class="grid-panel card">
+        <!-- Triple Tab Switcher Header -->
+        <div class="main-tabs-nav">
+          <button type="button" class="main-tab-btn active" id="tab-btn-seating">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tab-svg-icon"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
+            <span>🪑 자리 배치</span>
+          </button>
+          <button type="button" class="main-tab-btn" id="tab-btn-groups">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tab-svg-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>👥 조 짜기</span>
+          </button>
+          <button type="button" class="main-tab-btn" id="tab-btn-picker">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tab-svg-icon"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            <span>🎲 랜덤 뽑기</span>
+          </button>
+        </div>
+        <!-- ================= TAB 1 VIEW: SEATING ================= -->
+        <div class="main-tab-view active" id="view-seating">
+          <div class="grid-header">
+            <div class="grid-status">
+              <span class="status-badge" id="seat-status-badge">좌석 설정: 0석 활성</span>
+              <span class="status-badge" id="diff-status-badge">대기 명단과 일치함</span>
+            </div>
+            <div class="utility-actions">
+              <button type="button" class="btn btn-icon" id="btn-reset-layout" title="레이아웃 초기화 (모두 활성화)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                <span>초기화</span>
+              </button>
+            </div>
+          </div>
+          <!-- The Classroom Visual Canvas (Captured by html2canvas) -->
+          <div id="classroom-canvas" class="classroom-canvas-theme">
+            <!-- Screen/Blackboard Indicator (Front of Class) -->
+            <div class="classroom-front">
+              <div class="blackboard">
+                <span class="chalk-text">교 탁 (앞 쪽)</span>
+              </div>
+            </div>
+            <!-- Classroom Seat Grid -->
+            <div id="seats-grid" class="seats-grid-container">
+              <!-- Dynamically generated in JS -->
+            </div>
+          </div>
+          <!-- Primary Action Triggers -->
+          <div class="action-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-shuffle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-svg animated-spin"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>랜덤 자리 배치 시작</span>
+            </button>
+            
+            <div class="secondary-actions">
+              <button type="button" class="btn btn-secondary" id="btn-save-image" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <span>이미지로 저장</span>
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-copy-text" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>결과 텍스트 복사</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- ================= TAB 2 VIEW: GROUP MAKER ================= -->
+        <div class="main-tab-view" id="view-groups" style="display: none;">
+          <div class="group-settings-row">
+            <div class="group-slider-wrapper" style="grid-column: 1 / -1; width: 100%;">
+              <label for="group-size">한 조당 목표 인원수: <span id="group-size-val">4</span>명</label>
+              <input type="range" id="group-size" min="2" max="10" value="4">
+            </div>
+          </div>
+          <!-- Group Visual Canvas (Captured by html2canvas) -->
+          <div id="group-canvas" class="group-canvas-theme">
+            <div class="group-front">
+              <div class="group-blackboard">
+                <span class="chalk-text">👥 조 편성 결과표</span>
+              </div>
+            </div>
+            <!-- Group Grid container -->
+            <div id="groups-board" class="groups-board-container">
+              <div class="group-empty-placeholder">
+                <p>왼쪽에서 학생 명단을 등록하고 아래 [조 짜기 시작]을 누르세요!</p>
+              </div>
+            </div>
+          </div>
+          <!-- Group Action Footer -->
+          <div class="action-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-group-shuffle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-svg animated-spin"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>조 짜기 시작</span>
+            </button>
+            
+            <div class="secondary-actions">
+              <button type="button" class="btn btn-secondary" id="btn-group-save-image" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <span>이미지로 저장</span>
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-group-copy-text" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>결과 텍스트 복사</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- ================= TAB 3 VIEW: RANDOM SELECTOR ================= -->
+        <div class="main-tab-view" id="view-picker" style="display: none;">
+          <div class="group-settings-row">
+            <div class="group-slider-wrapper" style="grid-column: 1 / -1; width: 100%;">
+              <label for="picker-count">추첨 인원수: <span id="picker-count-val">1</span>명</label>
+              <input type="range" id="picker-count" min="1" max="10" value="1">
+            </div>
+          </div>
+          <!-- Picker Visual Canvas (Captured by html2canvas) -->
+          <div id="picker-canvas" class="group-canvas-theme">
+            <div class="group-front">
+              <div class="group-blackboard">
+                <span class="chalk-text">🎲 랜덤 추첨 결과판</span>
+              </div>
+            </div>
+            <!-- Picker Board Container -->
+            <div id="picker-board" class="groups-board-container" style="min-height: 240px; display: flex; align-items: center; justify-content: center;">
+              <div class="group-empty-placeholder" style="width: 100%;">
+                <p>왼쪽에서 학생 명단을 등록하고 아래 [추첨 시작]을 누르세요!</p>
+              </div>
+            </div>
+          </div>
+          <!-- Picker Action Footer -->
+          <div class="action-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-picker-start">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span>추첨 시작</span>
+            </button>
+            
+            <div class="secondary-actions">
+              <button type="button" class="btn btn-secondary" id="btn-picker-copy-text" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>결과 텍스트 복사</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <!-- Custom Alert Toast -->
+  <div id="toast-container" class="toast-container"></div>
+  <!-- JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>

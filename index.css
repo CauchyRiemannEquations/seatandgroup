@@ -683,7 +683,6 @@ body.light-theme .status-badge {
   flex-direction: column;
   gap: 1.5rem;
   position: relative;
-  overflow: hidden;
 }
 
 body.light-theme #classroom-canvas,
@@ -892,9 +891,7 @@ body.light-theme .group-settings-row {
   gap: 1rem;
   width: 100%;
   flex: 1;
-  overflow-y: auto;
   align-content: start;
-  max-height: 480px;
   padding: 0.25rem;
 }
 
@@ -1660,8 +1657,7 @@ body.light-theme .seat-lock-select {
   
   /* 조 배치의 경우 모바일 세로 레이아웃 최적화 */
   .groups-board-container {
-    grid-template-columns: 1fr; /* 모바일 조 카드는 1열로 큼직하게 배치 */
-    max-height: 520px;
+    grid-template-columns: 1fr; /* 1열 배치 */
   }
 }
 

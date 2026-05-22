@@ -18,6 +18,7 @@
   <!-- Background Glows -->
   <div class="bg-glow bg-glow-1"></div>
   <div class="bg-glow bg-glow-2"></div>
+
   <div class="app-container">
     <!-- Main Header -->
     <header class="app-header">
@@ -33,6 +34,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon moon-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
       </button>
     </header>
+
     <div class="main-layout">
       <!-- Left Panel: Configuration & Inputs -->
       <aside class="sidebar-panel card">
@@ -58,6 +60,7 @@
             </div>
           </div>
         </section>
+
         <!-- Student Input Section -->
         <section class="settings-section">
           <div class="section-title">
@@ -71,12 +74,14 @@
             </div>
           </div>
         </section>
+
         <!-- Grid Layout Settings (Only visible/relevant for Seating tab, but left active) -->
         <section class="settings-section" id="sidebar-layout-settings">
           <div class="section-title">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
             <h2>교실 크기 & 레이아웃</h2>
           </div>
+
           <div class="control-group">
             <div class="slider-wrapper">
               <label for="grid-rows">세로 줄 (행): <span id="rows-val">5</span>줄</label>
@@ -87,6 +92,7 @@
               <input type="range" id="grid-cols" min="2" max="10" value="6">
             </div>
           </div>
+
           <div class="preset-wrapper">
             <h3>자주 쓰는 배치 프리셋</h3>
             <div class="preset-buttons">
@@ -114,6 +120,7 @@
               <span><strong>자리 지정 방법:</strong> 비밀 모드 켠 채 배치표의 좌석을 클릭하여 원하는 학생을 즉시 고정해 보세요. (평소 핀 숨김)</span>
             </p>
           </div>
+
           <div class="preset-wrapper">
             <h3 style="font-size: 0.8rem; color: var(--text-secondary);">🚫 학생 간 거리두기 (기피) 등록</h3>
             <div class="class-manager-wrapper" style="gap: 0.4rem;">
@@ -123,6 +130,7 @@
               <button type="button" class="btn btn-primary btn-sm" id="btn-add-sep" style="width: 100%; margin-top: 0.25rem; background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);">규칙 추가</button>
             </div>
           </div>
+
           <div class="active-rules-list" style="margin-top: 0.5rem;">
             <h3 style="font-size: 0.8rem; color: var(--text-secondary);">현재 설정된 기피 목록 (<span id="seps-count">0</span>)</h3>
             <ul id="seps-list-ul" class="rules-list" style="max-height: 120px;">
@@ -132,6 +140,7 @@
         </section>
         
       </aside>
+
       <!-- Right Panel: Grid & Live Preview -->
       <main class="grid-panel card">
         <!-- Triple Tab Switcher Header -->
@@ -149,6 +158,7 @@
             <span>🎲 랜덤 뽑기</span>
           </button>
         </div>
+
         <!-- ================= TAB 1 VIEW: SEATING ================= -->
         <div class="main-tab-view active" id="view-seating">
           <div class="grid-header">
@@ -163,6 +173,7 @@
               </button>
             </div>
           </div>
+
           <!-- The Classroom Visual Canvas (Captured by html2canvas) -->
           <div id="classroom-canvas" class="classroom-canvas-theme">
             <!-- Screen/Blackboard Indicator (Front of Class) -->
@@ -171,11 +182,13 @@
                 <span class="chalk-text">교 탁 (앞 쪽)</span>
               </div>
             </div>
+
             <!-- Classroom Seat Grid -->
             <div id="seats-grid" class="seats-grid-container">
               <!-- Dynamically generated in JS -->
             </div>
           </div>
+
           <!-- Primary Action Triggers -->
           <div class="action-footer">
             <button type="button" class="btn btn-primary btn-lg" id="btn-shuffle">
@@ -195,6 +208,7 @@
             </div>
           </div>
         </div>
+
         <!-- ================= TAB 2 VIEW: GROUP MAKER ================= -->
         <div class="main-tab-view" id="view-groups" style="display: none;">
           <div class="group-settings-row">
@@ -203,6 +217,7 @@
               <input type="range" id="group-size" min="2" max="10" value="4">
             </div>
           </div>
+
           <!-- Group Visual Canvas (Captured by html2canvas) -->
           <div id="group-canvas" class="group-canvas-theme">
             <div class="group-front">
@@ -210,6 +225,7 @@
                 <span class="chalk-text">👥 조 편성 결과표</span>
               </div>
             </div>
+
             <!-- Group Grid container -->
             <div id="groups-board" class="groups-board-container">
               <div class="group-empty-placeholder">
@@ -217,6 +233,7 @@
               </div>
             </div>
           </div>
+
           <!-- Group Action Footer -->
           <div class="action-footer">
             <button type="button" class="btn btn-primary btn-lg" id="btn-group-shuffle">
@@ -236,6 +253,7 @@
             </div>
           </div>
         </div>
+
         <!-- ================= TAB 3 VIEW: RANDOM SELECTOR ================= -->
         <div class="main-tab-view" id="view-picker" style="display: none;">
           <div class="group-settings-row">
@@ -244,6 +262,7 @@
               <input type="range" id="picker-count" min="1" max="10" value="1">
             </div>
           </div>
+
           <!-- Picker Visual Canvas (Captured by html2canvas) -->
           <div id="picker-canvas" class="group-canvas-theme">
             <div class="group-front">
@@ -251,6 +270,7 @@
                 <span class="chalk-text">🎲 랜덤 추첨 결과판</span>
               </div>
             </div>
+
             <!-- Picker Board Container -->
             <div id="picker-board" class="groups-board-container" style="min-height: 240px; display: flex; align-items: center; justify-content: center;">
               <div class="group-empty-placeholder" style="width: 100%;">
@@ -258,6 +278,7 @@
               </div>
             </div>
           </div>
+
           <!-- Picker Action Footer -->
           <div class="action-footer">
             <button type="button" class="btn btn-primary btn-lg" id="btn-picker-start">
@@ -276,8 +297,12 @@
       </main>
     </div>
   </div>
+
+
+
   <!-- Custom Alert Toast -->
   <div id="toast-container" class="toast-container"></div>
+
   <!-- JavaScript -->
   <script src="app.js"></script>
 </body>

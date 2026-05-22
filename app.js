@@ -784,9 +784,9 @@ function completeGroupShuffle(groupSizes) {
   playSuccessSound();
   
   if (result.success) {
-    showToast("기피 관계를 완벽히 격리하여 모둠이 편성되었습니다!");
+    showToast("성공적으로 조 편성을 완료했습니다!");
   } else {
-    showToast("제약 조건 충돌을 최소화한 최선의 모둠표를 출력합니다.", "warning");
+    showToast("조 편성을 완료했습니다.", "success");
   }
   
   DOM.btnGroupShuffle.disabled = false;
@@ -1150,9 +1150,9 @@ function completeShuffle(activeSeats) {
   playSuccessSound();
   
   if (result.success) {
-    showToast("제약 조건을 완벽히 충족하여 자리배치가 완료되었습니다!");
+    showToast("성공적으로 자리 배치를 완료했습니다!");
   } else {
-    showToast("일부 거리두기 충돌이 감지되어 가능한 최선의 배치를 제공합니다.", "warning");
+    showToast("자리 배치를 완료했습니다.", "success");
   }
   
   DOM.btnShuffle.disabled = false;
@@ -1459,25 +1459,38 @@ function updateSeparationsList() {
 DOM.btnSaveImage.addEventListener('click', () => {
   if (state.isShuffling || state.assignment.length === 0) return;
   
+  if (typeof html2canvas === 'undefined') {
+    showToast("이미지 저장 라이브러리(html2canvas)를 가져오지 못했습니다. 인터넷망 연결 상태를 확인해주시거나, 오프라인 환경인 경우 html2canvas.min.js 파일을 다운로드하여 같은 폴더에 두고 불러와야 합니다.", "danger");
+    return;
+  }
+  
   showToast("배치표 이미지를 캡처하고 있습니다...", "success");
   buildGrid(); // 핀 숨김 상태 강제 빌드
   
   setTimeout(() => {
-    const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
-    html2canvas(DOM.classroomCanvas, {
-      backgroundColor: bg,
-      scale: 2,
-      logging: false,
-      useCORS: true
-    }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `자리배치결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
-      link.href = canvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showToast("자리 배치표가 다운로드되었습니다!");
-    });
+    try {
+      const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
+      html2canvas(DOM.classroomCanvas, {
+        backgroundColor: bg,
+        scale: 2,
+        logging: false,
+        useCORS: true
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `자리배치결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("자리 배치표가 다운로드되었습니다!");
+      }).catch(err => {
+        console.error(err);
+        showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
+      });
+    } catch (e) {
+      console.error(e);
+      showToast("이미지 저장 도중 브라우저 보안 또는 스크립트 에러가 발생했습니다.", "danger");
+    }
   }, 100);
 });
 
@@ -1511,24 +1524,37 @@ DOM.btnCopyText.addEventListener('click', () => {
 DOM.btnGroupSaveImage.addEventListener('click', () => {
   if (state.isShuffling || state.lastGroupAssignment.length === 0) return;
   
+  if (typeof html2canvas === 'undefined') {
+    showToast("이미지 저장 라이브러리(html2canvas)를 가져오지 못했습니다. 인터넷망 연결 상태를 확인해주시거나, 오프라인 환경인 경우 html2canvas.min.js 파일을 다운로드하여 같은 폴더에 두고 불러와야 합니다.", "danger");
+    return;
+  }
+  
   showToast("조 편성표 이미지를 캡처하고 있습니다...", "success");
   
   setTimeout(() => {
-    const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
-    html2canvas(DOM.groupCanvas, {
-      backgroundColor: bg,
-      scale: 2,
-      logging: false,
-      useCORS: true
-    }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `모둠편성결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
-      link.href = canvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showToast("소그룹 조 편성표가 다운로드되었습니다!");
-    });
+    try {
+      const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
+      html2canvas(DOM.groupCanvas, {
+        backgroundColor: bg,
+        scale: 2,
+        logging: false,
+        useCORS: true
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `모둠편성결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("소그룹 조 편성표가 다운로드되었습니다!");
+      }).catch(err => {
+        console.error(err);
+        showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
+      });
+    } catch (e) {
+      console.error(e);
+      showToast("이미지 저장 도중 브라우저 보안 또는 스크립트 에러가 발생했습니다.", "danger");
+    }
   }, 100);
 });
 

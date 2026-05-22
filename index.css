@@ -592,6 +592,7 @@ body.light-theme .main-tab-btn {
 
 /* 다크 테마 활성 탭 (기본) */
 .main-tab-btn.active {
+  background-color: #d97706 !important; /* Fallback 단색 */
   background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
   color: #ffffff !important;
   border-color: transparent !important;
@@ -600,10 +601,21 @@ body.light-theme .main-tab-btn {
 
 /* 코지 라이트 테마 활성 탭 */
 body.light-theme .main-tab-btn.active {
+  background-color: #5c7a43 !important; /* Fallback 단색 */
   background: linear-gradient(135deg, #5c7a43 0%, #4a5c39 100%) !important;
   color: #ffffff !important;
   border-color: transparent !important;
   box-shadow: 0 4px 15px rgba(74, 92, 57, 0.25) !important;
+}
+
+/* 활성 탭 내부 아이콘 및 텍스트 강제 색상 지정 */
+.main-tab-btn.active span,
+.main-tab-btn.active svg,
+body.light-theme .main-tab-btn.active span,
+body.light-theme .main-tab-btn.active svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: none; /* SVG 내부 채움 억제 */
 }
 
 .main-tab-btn:not(.active):hover,

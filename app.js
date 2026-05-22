@@ -1467,6 +1467,8 @@ DOM.btnSaveImage.addEventListener('click', () => {
   showToast("배치표 이미지를 캡처하고 있습니다...", "success");
   buildGrid(); // 핀 숨김 상태 강제 빌드
   
+  document.body.classList.add('html2canvas-capturing');
+  
   setTimeout(() => {
     try {
       const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
@@ -1476,6 +1478,7 @@ DOM.btnSaveImage.addEventListener('click', () => {
         logging: false,
         useCORS: true
       }).then(canvas => {
+        document.body.classList.remove('html2canvas-capturing');
         const link = document.createElement('a');
         link.download = `자리배치결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -1484,14 +1487,16 @@ DOM.btnSaveImage.addEventListener('click', () => {
         document.body.removeChild(link);
         showToast("자리 배치표가 다운로드되었습니다!");
       }).catch(err => {
+        document.body.classList.remove('html2canvas-capturing');
         console.error(err);
         showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
       });
     } catch (e) {
+      document.body.classList.remove('html2canvas-capturing');
       console.error(e);
       showToast("이미지 저장 도중 브라우저 보안 또는 스크립트 에러가 발생했습니다.", "danger");
     }
-  }, 100);
+  }, 150);
 });
 
 DOM.btnCopyText.addEventListener('click', () => {
@@ -1531,6 +1536,8 @@ DOM.btnGroupSaveImage.addEventListener('click', () => {
   
   showToast("조 편성표 이미지를 캡처하고 있습니다...", "success");
   
+  document.body.classList.add('html2canvas-capturing');
+  
   setTimeout(() => {
     try {
       const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
@@ -1540,6 +1547,7 @@ DOM.btnGroupSaveImage.addEventListener('click', () => {
         logging: false,
         useCORS: true
       }).then(canvas => {
+        document.body.classList.remove('html2canvas-capturing');
         const link = document.createElement('a');
         link.download = `모둠편성결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -1548,14 +1556,16 @@ DOM.btnGroupSaveImage.addEventListener('click', () => {
         document.body.removeChild(link);
         showToast("소그룹 조 편성표가 다운로드되었습니다!");
       }).catch(err => {
+        document.body.classList.remove('html2canvas-capturing');
         console.error(err);
         showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
       });
     } catch (e) {
+      document.body.classList.remove('html2canvas-capturing');
       console.error(e);
       showToast("이미지 저장 도중 브라우저 보안 또는 스크립트 에러가 발생했습니다.", "danger");
     }
-  }, 100);
+  }, 150);
 });
 
 DOM.btnGroupCopyText.addEventListener('click', () => {

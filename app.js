@@ -31,6 +31,9 @@ const state = {
   theme: 'dark', // 'dark' | 'light'
   activeTab: 'seating', // 'seating' | 'groups' | 'picker'
   
+  // 교탁 기준 상하반전 보기 상태 (false: 교탁 위 / true: 교탁 아래)
+  isFlippedView: false,
+
   // 보안 모드 상태
   isSecretUnlocked: false,
   lockSelectingStudent: null, // 고정 대기 학생
@@ -64,6 +67,7 @@ const DOM = {
   presetPairs: document.getElementById('preset-pairs'),
   presetUShape: document.getElementById('preset-u-shape'),
   btnResetLayout: document.getElementById('btn-reset-layout'),
+  btnFlipView: document.getElementById('btn-flip-view'),
   sidebarLayoutSettings: document.getElementById('sidebar-layout-settings'),
   appTitleTrigger: document.getElementById('app-title-trigger'),
   
@@ -378,14 +382,45 @@ function updateStatusIndicators() {
 }
 
 // 7. 좌석 그리드 빌더
+// 교탁 기준 상하반전 시 캔버스 요소 순서(교탁/그리드/뒤쪽 표시)를 물리적으로 재배열
+// (html2canvas 캡처 호환을 위해 CSS 반전 대신 DOM 순서를 직접 조정)
+function applyFlippedLayout() {
+  const canvas = DOM.classroomCanvas;
+  const front = canvas.querySelector('.classroom-front');
+  const back = canvas.querySelector('.classroom-back');
+  if (!front || !back) return;
+
+  if (state.isFlippedView) {
+    canvas.insertBefore(back, canvas.firstChild); // 뒤 쪽 표시를 맨 위로
+    canvas.appendChild(front);                    // 교탁(앞 쪽)을 맨 아래로
+  } else {
+    canvas.insertBefore(front, canvas.firstChild);
+    canvas.appendChild(back);
+  }
+
+  canvas.classList.toggle('flipped-view', state.isFlippedView);
+  if (DOM.btnFlipView) {
+    DOM.btnFlipView.classList.toggle('toggled-on', state.isFlippedView);
+  }
+}
+
 function buildGrid() {
   const container = DOM.seatsGrid;
   container.innerHTML = '';
   container.style.gridTemplateColumns = `repeat(${state.cols}, 1fr)`;
-  
+
   const totalSeats = state.rows * state.cols;
-  
-  for (let i = 0; i < totalSeats; i++) {
+
+  // 표시 순서 계산: 상하반전 모드에서는 행(줄) 순서를 뒤집어 교탁에서 먼 줄부터 그림
+  const displayOrder = [];
+  for (let r = 0; r < state.rows; r++) {
+    const sourceRow = state.isFlippedView ? (state.rows - 1 - r) : r;
+    for (let c = 0; c < state.cols; c++) {
+      displayOrder.push(sourceRow * state.cols + c);
+    }
+  }
+
+  for (const i of displayOrder) {
     const row = Math.floor(i / state.cols) + 1;
     const col = (i % state.cols) + 1;
     
@@ -438,7 +473,9 @@ function buildGrid() {
     seat.addEventListener('click', () => handleSeatClick(i));
     container.appendChild(seat);
   }
-  
+
+  applyFlippedLayout();
+
   // 저장 및 복사 버튼 상태 동기화 (유효한 배치가 있는 경우에만 활성화)
   const hasAssignment = state.assignment && state.assignment.length > 0 && state.assignment.some(name => name && name !== '좌 석' && name !== 'X');
   DOM.btnSaveImage.disabled = !hasAssignment;
@@ -641,6 +678,20 @@ DOM.btnResetLayout.addEventListener('click', () => {
   saveClassesToStorage();
   showToast("레이아웃이 초기화되었습니다.");
 });
+
+// 교탁 기준 상하반전 보기 토글
+if (DOM.btnFlipView) {
+  DOM.btnFlipView.addEventListener('click', () => {
+    if (state.isShuffling) return;
+    state.isFlippedView = !state.isFlippedView;
+    buildGrid();
+    showToast(
+      state.isFlippedView
+        ? "상하반전 보기: 교탁이 아래쪽에 표시됩니다. (학생 시점)"
+        : "기본 보기: 교탁이 위쪽에 표시됩니다. (교사 시점)"
+    );
+  });
+}
 
 DOM.gridRows.addEventListener('input', e => updateGridDimensions(parseInt(e.target.value), state.cols));
 DOM.gridCols.addEventListener('input', e => updateGridDimensions(state.rows, parseInt(e.target.value)));
@@ -1455,48 +1506,79 @@ function updateSeparationsList() {
 // 15. 이미지 내보내기 & 텍스트 공유
 // ============================================================================
 
-// 1) 자리배치 내보내기
-DOM.btnSaveImage.addEventListener('click', () => {
-  if (state.isShuffling || state.assignment.length === 0) return;
-  
-  if (typeof html2canvas === 'undefined') {
-    showToast("이미지 저장 라이브러리(html2canvas)를 가져오지 못했습니다. 인터넷망 연결 상태를 확인해주시거나, 오프라인 환경인 경우 html2canvas.min.js 파일을 다운로드하여 같은 폴더에 두고 불러와야 합니다.", "danger");
-    return;
-  }
-  
-  showToast("배치표 이미지를 캡처하고 있습니다...", "success");
-  buildGrid(); // 핀 숨김 상태 강제 빌드
-  
-  document.body.classList.add('html2canvas-capturing');
-  
-  setTimeout(() => {
-    try {
-      const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
-      html2canvas(DOM.classroomCanvas, {
-        backgroundColor: bg,
+// 공용 캡처 헬퍼: 대상 요소를 PNG로 캡처하여 즉시 다운로드
+function captureElementToPng(element, filename, bgColor) {
+  return new Promise((resolve, reject) => {
+    // 레이아웃 리플로우가 반영될 시간을 잠시 확보한 뒤 캡처
+    setTimeout(() => {
+      html2canvas(element, {
+        backgroundColor: bgColor,
         scale: 2,
         logging: false,
         useCORS: true
       }).then(canvas => {
-        document.body.classList.remove('html2canvas-capturing');
         const link = document.createElement('a');
-        link.download = `자리배치결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
+        link.download = filename;
         link.href = canvas.toDataURL('image/png');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        showToast("자리 배치표가 다운로드되었습니다!");
-      }).catch(err => {
-        document.body.classList.remove('html2canvas-capturing');
-        console.error(err);
-        showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
-      });
-    } catch (e) {
-      document.body.classList.remove('html2canvas-capturing');
-      console.error(e);
-      showToast("이미지 저장 도중 브라우저 보안 또는 스크립트 에러가 발생했습니다.", "danger");
-    }
-  }, 150);
+        resolve();
+      }).catch(reject);
+    }, 200);
+  });
+}
+
+function getCaptureBgColor() {
+  return state.theme === 'light' ? '#faf8f3' : '#141312';
+}
+
+// 1) 자리배치 내보내기 — 기본(교탁 위) + 상하반전(교탁 아래) 2장을 연속 생성
+DOM.btnSaveImage.addEventListener('click', async () => {
+  if (state.isShuffling || state.assignment.length === 0) return;
+
+  if (typeof html2canvas === 'undefined') {
+    showToast("이미지 저장 라이브러리(html2canvas)를 가져오지 못했습니다. 인터넷망 연결 상태를 확인해주시거나, 오프라인 환경인 경우 html2canvas.min.js 파일을 다운로드하여 같은 폴더에 두고 불러와야 합니다.", "danger");
+    return;
+  }
+
+  showToast("배치표 이미지를 캡처하고 있습니다... (기본 + 상하반전 총 2장)", "success");
+
+  const prevFlipped = state.isFlippedView;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const bg = getCaptureBgColor();
+
+  document.body.classList.add('html2canvas-capturing');
+
+  try {
+    // ① 기본 모드: 교탁이 위, 책상이 아래 (교사 시점)
+    state.isFlippedView = false;
+    buildGrid();
+    await captureElementToPng(
+      DOM.classroomCanvas,
+      `자리배치결과_${state.activeClass}_${dateStr}_교탁위.png`,
+      bg
+    );
+
+    // ② 상하반전 모드: 교탁이 아래, 책상이 위 (교탁 기준 상하반전)
+    state.isFlippedView = true;
+    buildGrid();
+    await captureElementToPng(
+      DOM.classroomCanvas,
+      `자리배치결과_${state.activeClass}_${dateStr}_상하반전_교탁아래.png`,
+      bg
+    );
+
+    showToast("자리 배치표 2장(기본 / 상하반전)이 모두 다운로드되었습니다!");
+  } catch (err) {
+    console.error(err);
+    showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
+  } finally {
+    // 저장 전 보기 상태로 복원
+    state.isFlippedView = prevFlipped;
+    buildGrid();
+    document.body.classList.remove('html2canvas-capturing');
+  }
 });
 
 DOM.btnCopyText.addEventListener('click', () => {
@@ -1540,7 +1622,7 @@ DOM.btnGroupSaveImage.addEventListener('click', () => {
   
   setTimeout(() => {
     try {
-      const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
+      const bg = getCaptureBgColor();
       html2canvas(DOM.groupCanvas, {
         backgroundColor: bg,
         scale: 2,

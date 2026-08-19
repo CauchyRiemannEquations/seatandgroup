@@ -31,7 +31,7 @@ const state = {
   theme: 'dark', // 'dark' | 'light'
   activeTab: 'seating', // 'seating' | 'groups' | 'picker'
   
-  // 교탁 기준 상하반전 보기 상태 (false: 교탁 위 / true: 교탁 아래)
+  // 교탁 시점 보기 상태 (false: 뒤에서 교탁을 바라본 기본 배치 / true: 교탁에서 학생들을 바라본 180도 회전 배치)
   isFlippedView: false,
 
   // 보안 모드 상태
@@ -382,7 +382,7 @@ function updateStatusIndicators() {
 }
 
 // 7. 좌석 그리드 빌더
-// 교탁 기준 상하반전 시 캔버스 요소 순서(교탁/그리드/뒤쪽 표시)를 물리적으로 재배열
+// 교탁 시점 모드 시 캔버스 요소 순서(교탁/그리드/뒤쪽 표시)를 물리적으로 재배열
 // (html2canvas 캡처 호환을 위해 CSS 반전 대신 DOM 순서를 직접 조정)
 function applyFlippedLayout() {
   const canvas = DOM.classroomCanvas;
@@ -411,12 +411,14 @@ function buildGrid() {
 
   const totalSeats = state.rows * state.cols;
 
-  // 표시 순서 계산: 상하반전 모드에서는 행(줄) 순서를 뒤집어 교탁에서 먼 줄부터 그림
+  // 표시 순서 계산: 교탁 시점 모드에서는 교탁에서 학생들을 바라본 모습이 되도록
+  // 행(줄)과 열을 모두 뒤집어 180도 회전된 배치로 그림
   const displayOrder = [];
   for (let r = 0; r < state.rows; r++) {
     const sourceRow = state.isFlippedView ? (state.rows - 1 - r) : r;
     for (let c = 0; c < state.cols; c++) {
-      displayOrder.push(sourceRow * state.cols + c);
+      const sourceCol = state.isFlippedView ? (state.cols - 1 - c) : c;
+      displayOrder.push(sourceRow * state.cols + sourceCol);
     }
   }
 
@@ -679,7 +681,7 @@ DOM.btnResetLayout.addEventListener('click', () => {
   showToast("레이아웃이 초기화되었습니다.");
 });
 
-// 교탁 기준 상하반전 보기 토글
+// 교탁 시점 보기 토글 (같은 배치를 교탁에서 학생들을 바라본 모습으로 180도 회전)
 if (DOM.btnFlipView) {
   DOM.btnFlipView.addEventListener('click', () => {
     if (state.isShuffling) return;
@@ -687,8 +689,8 @@ if (DOM.btnFlipView) {
     buildGrid();
     showToast(
       state.isFlippedView
-        ? "상하반전 보기: 교탁이 아래쪽에 표시됩니다. (학생 시점)"
-        : "기본 보기: 교탁이 위쪽에 표시됩니다. (교사 시점)"
+        ? "교탁 시점 보기: 교탁에서 학생들을 바라본 배치입니다."
+        : "기본 보기: 교실 뒤에서 교탁을 바라본 배치입니다."
     );
   });
 }
@@ -1533,7 +1535,7 @@ function getCaptureBgColor() {
   return state.theme === 'light' ? '#faf8f3' : '#141312';
 }
 
-// 1) 자리배치 내보내기 — 기본(교탁 위) + 상하반전(교탁 아래) 2장을 연속 생성
+// 1) 자리배치 내보내기 — 기본(뒤에서 본 배치) + 교탁 시점(180도 회전) 2장을 연속 생성
 DOM.btnSaveImage.addEventListener('click', async () => {
   if (state.isShuffling || state.assignment.length === 0) return;
 
@@ -1542,7 +1544,7 @@ DOM.btnSaveImage.addEventListener('click', async () => {
     return;
   }
 
-  showToast("배치표 이미지를 캡처하고 있습니다... (기본 + 상하반전 총 2장)", "success");
+  showToast("배치표 이미지를 캡처하고 있습니다... (기본 + 교탁 시점 총 2장)", "success");
 
   const prevFlipped = state.isFlippedView;
   const dateStr = new Date().toISOString().slice(0, 10);
@@ -1551,25 +1553,25 @@ DOM.btnSaveImage.addEventListener('click', async () => {
   document.body.classList.add('html2canvas-capturing');
 
   try {
-    // ① 기본 모드: 교탁이 위, 책상이 아래 (교사 시점)
+    // ① 기본 모드: 교실 뒤에서 교탁을 바라본 배치 (교탁 위)
     state.isFlippedView = false;
     buildGrid();
     await captureElementToPng(
       DOM.classroomCanvas,
-      `자리배치결과_${state.activeClass}_${dateStr}_교탁위.png`,
+      `자리배치결과_${state.activeClass}_${dateStr}_기본.png`,
       bg
     );
 
-    // ② 상하반전 모드: 교탁이 아래, 책상이 위 (교탁 기준 상하반전)
+    // ② 교탁 시점 모드: 교탁에서 학생들을 바라본 배치 (180도 회전, 교탁 아래)
     state.isFlippedView = true;
     buildGrid();
     await captureElementToPng(
       DOM.classroomCanvas,
-      `자리배치결과_${state.activeClass}_${dateStr}_상하반전_교탁아래.png`,
+      `자리배치결과_${state.activeClass}_${dateStr}_교탁시점.png`,
       bg
     );
 
-    showToast("자리 배치표 2장(기본 / 상하반전)이 모두 다운로드되었습니다!");
+    showToast("자리 배치표 2장(기본 / 교탁 시점)이 모두 다운로드되었습니다!");
   } catch (err) {
     console.error(err);
     showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");

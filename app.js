@@ -31,6 +31,9 @@ const state = {
   theme: 'dark', // 'dark' | 'light'
   activeTab: 'seating', // 'seating' | 'groups' | 'picker'
   
+  // 교탁 시점 보기 상태 (false: 뒤에서 교탁을 바라본 기본 배치 / true: 교탁에서 학생들을 바라본 180도 회전 배치)
+  isFlippedView: false,
+
   // 보안 모드 상태
   isSecretUnlocked: false,
   lockSelectingStudent: null, // 고정 대기 학생
@@ -64,6 +67,7 @@ const DOM = {
   presetPairs: document.getElementById('preset-pairs'),
   presetUShape: document.getElementById('preset-u-shape'),
   btnResetLayout: document.getElementById('btn-reset-layout'),
+  btnFlipView: document.getElementById('btn-flip-view'),
   sidebarLayoutSettings: document.getElementById('sidebar-layout-settings'),
   appTitleTrigger: document.getElementById('app-title-trigger'),
   
@@ -79,8 +83,10 @@ const DOM = {
   seatsGrid: document.getElementById('seats-grid'),
   classroomCanvas: document.getElementById('classroom-canvas'),
   btnShuffle: document.getElementById('btn-shuffle'),
-  btnSaveImage: document.getElementById('btn-save-image'),
-  btnCopyText: document.getElementById('btn-copy-text'),
+  btnSaveStudent: document.getElementById('btn-save-student'),
+  btnSaveTeacher: document.getElementById('btn-save-teacher'),
+  saveMenuStudent: document.getElementById('save-menu-student'),
+  saveMenuTeacher: document.getElementById('save-menu-teacher'),
   seatStatusBadge: document.getElementById('seat-status-badge'),
   diffStatusBadge: document.getElementById('diff-status-badge'),
   
@@ -378,14 +384,47 @@ function updateStatusIndicators() {
 }
 
 // 7. 좌석 그리드 빌더
+// 교탁 시점 모드 시 캔버스 요소 순서(교탁/그리드/뒤쪽 표시)를 물리적으로 재배열
+// (html2canvas 캡처 호환을 위해 CSS 반전 대신 DOM 순서를 직접 조정)
+function applyFlippedLayout() {
+  const canvas = DOM.classroomCanvas;
+  const front = canvas.querySelector('.classroom-front');
+  const back = canvas.querySelector('.classroom-back');
+  if (!front || !back) return;
+
+  if (state.isFlippedView) {
+    canvas.insertBefore(back, canvas.firstChild); // 뒤 쪽 표시를 맨 위로
+    canvas.appendChild(front);                    // 교탁(앞 쪽)을 맨 아래로
+  } else {
+    canvas.insertBefore(front, canvas.firstChild);
+    canvas.appendChild(back);
+  }
+
+  canvas.classList.toggle('flipped-view', state.isFlippedView);
+  if (DOM.btnFlipView) {
+    DOM.btnFlipView.classList.toggle('toggled-on', state.isFlippedView);
+  }
+}
+
 function buildGrid() {
   const container = DOM.seatsGrid;
   container.innerHTML = '';
   container.style.gridTemplateColumns = `repeat(${state.cols}, 1fr)`;
-  
+
   const totalSeats = state.rows * state.cols;
-  
-  for (let i = 0; i < totalSeats; i++) {
+
+  // 표시 순서 계산: 교탁 시점 모드에서는 교탁에서 학생들을 바라본 모습이 되도록
+  // 행(줄)과 열을 모두 뒤집어 180도 회전된 배치로 그림
+  const displayOrder = [];
+  for (let r = 0; r < state.rows; r++) {
+    const sourceRow = state.isFlippedView ? (state.rows - 1 - r) : r;
+    for (let c = 0; c < state.cols; c++) {
+      const sourceCol = state.isFlippedView ? (state.cols - 1 - c) : c;
+      displayOrder.push(sourceRow * state.cols + sourceCol);
+    }
+  }
+
+  for (const i of displayOrder) {
     const row = Math.floor(i / state.cols) + 1;
     const col = (i % state.cols) + 1;
     
@@ -438,11 +477,14 @@ function buildGrid() {
     seat.addEventListener('click', () => handleSeatClick(i));
     container.appendChild(seat);
   }
-  
-  // 저장 및 복사 버튼 상태 동기화 (유효한 배치가 있는 경우에만 활성화)
+
+  applyFlippedLayout();
+
+  // 저장 버튼 상태 동기화 (유효한 배치가 있는 경우에만 활성화)
   const hasAssignment = state.assignment && state.assignment.length > 0 && state.assignment.some(name => name && name !== '좌 석' && name !== 'X');
-  DOM.btnSaveImage.disabled = !hasAssignment;
-  DOM.btnCopyText.disabled = !hasAssignment;
+  DOM.btnSaveStudent.disabled = !hasAssignment;
+  DOM.btnSaveTeacher.disabled = !hasAssignment;
+  if (!hasAssignment) closeSaveMenus();
   
   updateStatusIndicators();
 }
@@ -641,6 +683,20 @@ DOM.btnResetLayout.addEventListener('click', () => {
   saveClassesToStorage();
   showToast("레이아웃이 초기화되었습니다.");
 });
+
+// 교탁 시점 보기 토글 (같은 배치를 교탁에서 학생들을 바라본 모습으로 180도 회전)
+if (DOM.btnFlipView) {
+  DOM.btnFlipView.addEventListener('click', () => {
+    if (state.isShuffling) return;
+    state.isFlippedView = !state.isFlippedView;
+    buildGrid();
+    showToast(
+      state.isFlippedView
+        ? "교탁 시점 보기: 교탁에서 학생들을 바라본 배치입니다."
+        : "기본 보기: 교실 뒤에서 교탁을 바라본 배치입니다."
+    );
+  });
+}
 
 DOM.gridRows.addEventListener('input', e => updateGridDimensions(parseInt(e.target.value), state.cols));
 DOM.gridCols.addEventListener('input', e => updateGridDimensions(state.rows, parseInt(e.target.value)));
@@ -1075,11 +1131,12 @@ function runShuffle() {
   
   state.isShuffling = true;
   DOM.btnShuffle.disabled = true;
-  DOM.btnSaveImage.disabled = true;
-  DOM.btnCopyText.disabled = true;
-  
+  DOM.btnSaveStudent.disabled = true;
+  DOM.btnSaveTeacher.disabled = true;
+  closeSaveMenus();
+
   initAudio();
-  
+
   let tickCount = 0;
   state.shuffleInterval = setInterval(() => {
     playTickSound();
@@ -1156,9 +1213,9 @@ function completeShuffle(activeSeats) {
   }
   
   DOM.btnShuffle.disabled = false;
-  DOM.btnSaveImage.disabled = false;
-  DOM.btnCopyText.disabled = false;
-  
+  DOM.btnSaveStudent.disabled = false;
+  DOM.btnSaveTeacher.disabled = false;
+
   saveClassesToStorage();
 }
 
@@ -1455,75 +1512,139 @@ function updateSeparationsList() {
 // 15. 이미지 내보내기 & 텍스트 공유
 // ============================================================================
 
-// 1) 자리배치 내보내기
-DOM.btnSaveImage.addEventListener('click', () => {
+// 공용 캡처 헬퍼: 대상 요소를 html2canvas 캔버스로 캡처
+function captureElementToCanvas(element, bgColor) {
+  return new Promise((resolve, reject) => {
+    // 레이아웃 리플로우가 반영될 시간을 잠시 확보한 뒤 캡처
+    setTimeout(() => {
+      html2canvas(element, {
+        backgroundColor: bgColor,
+        scale: 2,
+        logging: false,
+        useCORS: true
+      }).then(resolve).catch(reject);
+    }, 200);
+  });
+}
+
+function downloadDataUrl(dataUrl, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = dataUrl;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function getCaptureBgColor() {
+  return state.theme === 'light' ? '#faf8f3' : '#141312';
+}
+
+// 저장 옵션 드롭업 메뉴 열기/닫기
+function closeSaveMenus() {
+  document.querySelectorAll('.save-menu-wrapper.open').forEach(w => w.classList.remove('open'));
+}
+
+function toggleSaveMenu(wrapperBtn) {
+  const wrapper = wrapperBtn.closest('.save-menu-wrapper');
+  const wasOpen = wrapper.classList.contains('open');
+  closeSaveMenus();
+  if (!wasOpen) wrapper.classList.add('open');
+}
+
+if (DOM.btnSaveStudent) {
+  DOM.btnSaveStudent.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (DOM.btnSaveStudent.disabled) return;
+    toggleSaveMenu(DOM.btnSaveStudent);
+  });
+}
+if (DOM.btnSaveTeacher) {
+  DOM.btnSaveTeacher.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (DOM.btnSaveTeacher.disabled) return;
+    toggleSaveMenu(DOM.btnSaveTeacher);
+  });
+}
+
+// 메뉴 밖 클릭 시 닫기
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.save-menu-wrapper')) closeSaveMenus();
+});
+
+// 메뉴 항목(PDF/PNG) 클릭 바인딩
+document.querySelectorAll('.save-menu-item').forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isTeacherView = item.dataset.teacher === 'true';
+    const format = item.dataset.format; // 'pdf' | 'png'
+    closeSaveMenus();
+    saveSeatingChart(isTeacherView, format);
+  });
+});
+
+// 1) 자리배치 내보내기 — 학생용(교탁 위) / 교사용(교탁 시점, 교탁 아래)을 PDF 또는 PNG로 저장
+async function saveSeatingChart(isTeacherView, format) {
   if (state.isShuffling || state.assignment.length === 0) return;
-  
+
   if (typeof html2canvas === 'undefined') {
     showToast("이미지 저장 라이브러리(html2canvas)를 가져오지 못했습니다. 인터넷망 연결 상태를 확인해주시거나, 오프라인 환경인 경우 html2canvas.min.js 파일을 다운로드하여 같은 폴더에 두고 불러와야 합니다.", "danger");
     return;
   }
-  
-  showToast("배치표 이미지를 캡처하고 있습니다...", "success");
-  buildGrid(); // 핀 숨김 상태 강제 빌드
-  
-  document.body.classList.add('html2canvas-capturing');
-  
-  setTimeout(() => {
-    try {
-      const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
-      html2canvas(DOM.classroomCanvas, {
-        backgroundColor: bg,
-        scale: 2,
-        logging: false,
-        useCORS: true
-      }).then(canvas => {
-        document.body.classList.remove('html2canvas-capturing');
-        const link = document.createElement('a');
-        link.download = `자리배치결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
-        link.href = canvas.toDataURL('image/png');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showToast("자리 배치표가 다운로드되었습니다!");
-      }).catch(err => {
-        document.body.classList.remove('html2canvas-capturing');
-        console.error(err);
-        showToast("이미지 캡처 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
-      });
-    } catch (e) {
-      document.body.classList.remove('html2canvas-capturing');
-      console.error(e);
-      showToast("이미지 저장 도중 브라우저 보안 또는 스크립트 에러가 발생했습니다.", "danger");
-    }
-  }, 150);
-});
-
-DOM.btnCopyText.addEventListener('click', () => {
-  if (state.isShuffling || state.assignment.length === 0) return;
-  
-  let out = `🏫 [${state.activeClass} 자리배치 결과]\n`;
-  out += `앞 쪽 (교탁)\n`;
-  out += `=======================\n`;
-  for (let r = 0; r < state.rows; r++) {
-    const names = [];
-    for (let c = 0; c < state.cols; c++) {
-      const idx = r * state.cols + c;
-      if (state.disabledSeats.has(idx)) {
-        names.push("[통로]");
-      } else {
-        const student = state.assignment[idx];
-        names.push(student ? `[${student}]` : "[빈자리]");
-      }
-    }
-    out += `${r + 1}열: ${names.join(' ')}\n`;
+  if (format === 'pdf' && (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF)) {
+    showToast("PDF 저장 라이브러리(jsPDF)를 가져오지 못했습니다. 인터넷망 연결 상태를 확인해주세요.", "danger");
+    return;
   }
-  out += `=======================\n뒤 쪽`;
-  
-  navigator.clipboard.writeText(out).then(() => {
-    showToast("배치 텍스트가 클립보드에 복사되었습니다!");
-  });
-});
+
+  const viewLabel = isTeacherView ? '교사용' : '학생용';
+  showToast(`${viewLabel} 배치표를 ${format.toUpperCase()}로 저장하고 있습니다...`, "success");
+
+  const prevFlipped = state.isFlippedView;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const bg = getCaptureBgColor();
+  const baseName = `자리배치결과_${state.activeClass}_${dateStr}_${viewLabel}`;
+
+  document.body.classList.add('html2canvas-capturing');
+
+  try {
+    // 학생용: 뒤에서 교탁을 바라본 기본 배치 / 교사용: 교탁에서 바라본 180도 회전 배치
+    state.isFlippedView = isTeacherView;
+    buildGrid();
+    const canvas = await captureElementToCanvas(DOM.classroomCanvas, bg);
+
+    if (format === 'png') {
+      downloadDataUrl(canvas.toDataURL('image/png'), `${baseName}.png`);
+    } else {
+      // A4 용지에 여백을 두고 비율 유지로 배치 (인쇄 최적화)
+      const { jsPDF } = window.jspdf;
+      const isLandscape = canvas.width >= canvas.height;
+      const pdf = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const ratio = Math.min((pageW - margin * 2) / canvas.width, (pageH - margin * 2) / canvas.height);
+      const imgW = canvas.width * ratio;
+      const imgH = canvas.height * ratio;
+      // 배경이 단색이므로 JPEG 고품질 압축으로 파일 용량 최소화 (인쇄 품질 유지)
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pageW - imgW) / 2, (pageH - imgH) / 2, imgW, imgH);
+      pdf.save(`${baseName}.pdf`);
+    }
+
+    showToast(`${viewLabel} 자리 배치표가 ${format.toUpperCase()} 파일로 다운로드되었습니다!`);
+  } catch (err) {
+    console.error(err);
+    showToast("파일 저장 중 렌더링에 실패했습니다. (보안 제한 또는 캔버스 오류)", "danger");
+  } finally {
+    // 저장 전 보기 상태로 복원
+    state.isFlippedView = prevFlipped;
+    buildGrid();
+    document.body.classList.remove('html2canvas-capturing');
+  }
+}
 
 // 2) 조 짜기 결과 내보내기
 DOM.btnGroupSaveImage.addEventListener('click', () => {
@@ -1540,7 +1661,7 @@ DOM.btnGroupSaveImage.addEventListener('click', () => {
   
   setTimeout(() => {
     try {
-      const bg = state.theme === 'light' ? '#f4f6f9' : '#0a0a10';
+      const bg = getCaptureBgColor();
       html2canvas(DOM.groupCanvas, {
         backgroundColor: bg,
         scale: 2,

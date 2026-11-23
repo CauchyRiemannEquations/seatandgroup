@@ -604,7 +604,7 @@ function buildGrid() {
 
     let label = '통로';
     if (!isAisle) {
-      if (frontNames.size && i < state.frontRows * state.cols) seat.classList.add('front-zone');
+      if (!capturing && frontNames.size && i < state.frontRows * state.cols) seat.classList.add('front-zone');
       const indexLabel = document.createElement('span');
       indexLabel.className = 'seat-index';
       indexLabel.textContent = `${row}-${col}`;
@@ -613,6 +613,7 @@ function buildGrid() {
       const lockedName = state.locks.get(i);
       if (lockedName && !state.students.includes(lockedName)) state.locks.delete(i);
       const publicName = state.publicLocks.get(i);
+      const showPublicPin = !capturing && Boolean(publicName);
       const assignedName = state.assignment[i];
       const showPin = showSecret && !publicName && state.locks.has(i) && !publicNames.has(lockedName);
       const isEmpty = assignedName === '빈자리' || assignedName === 'X';
@@ -622,12 +623,14 @@ function buildGrid() {
       label = occupant || (isEmpty ? '빈자리' : '좌석');
       seat.classList.toggle('assigned', Boolean(occupant || isEmpty));
       seat.classList.toggle('empty-seat', !occupant && isEmpty);
-      seat.classList.toggle('public-fixed', Boolean(publicName));
-      seat.classList.toggle('front-preferred', hasPreference);
-      if (publicName || hasPreference) {
+      seat.classList.toggle('public-fixed', showPublicPin);
+      seat.classList.toggle('front-preferred', hasPreference && !showPublicPin);
+      if (showPublicPin) {
+        indexLabel.insertAdjacentHTML('beforeend', getPinSVG());
+      } else if (hasPreference) {
         const mark = document.createElement('span');
-        mark.className = publicName ? 'public-seat-badge' : 'front-seat-badge';
-        mark.textContent = publicName ? '지정석' : '희망';
+        mark.className = 'front-seat-badge';
+        mark.textContent = '희망';
         indexLabel.append(' ', mark);
       }
       if (showPin) seat.insertAdjacentHTML('beforeend', getPinSVG());
@@ -669,7 +672,7 @@ function buildGrid() {
 }
 
 function getPinSVG() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pin-indicator"><line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.5A2 2 0 0 1 15 9.26V5a3 3 0 0 0-6 0v4.26a2 2 0 0 1-.78 1.24l-2.78 3.5a2 2 0 0 0-.44 1.24Z"/></svg>`;
+  return '<svg class="pin-indicator" viewBox="0 0 24 24" aria-hidden="true"><use href="#seat-pin"/></svg>';
 }
 
 // 두 번째 클릭이 도착하기 전에 좌석 DOM을 다시 만들면 브라우저의 더블클릭 대상이 사라진다.

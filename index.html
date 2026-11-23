@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- CSS Stylesheet -->
   <link rel="icon" type="image/png" href="assets/seat-and-group.png">
-  <link rel="stylesheet" href="index.css?v=4.0">
+  <link rel="stylesheet" href="index.css?v=4.1">
   <!-- html2canvas CDN for PNG saving -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- jsPDF CDN for PDF saving -->
@@ -223,7 +223,7 @@
               <div class="map-summary">
                 <div class="map-legend" aria-label="배치도 범례">
                   <span><i class="legend-seat"></i>일반 좌석</span>
-                  <span><i class="legend-fixed"></i>지정석</span>
+                  <span><svg class="pin-indicator" viewBox="0 0 24 24" aria-hidden="true"><path id="seat-pin" d="m16 3 5 5-3 1-4 5v3l-2 2-3-4-6 6 5-7-4-3 2-2h3l5-4z"/></svg>지정석</span>
                   <span><i class="legend-front"></i>앞자리 범위</span>
                   <span><i class="legend-aisle"></i>통로</span>
                 </div>
@@ -418,6 +418,6 @@
   <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
   <!-- JavaScript -->
-  <script src="app.js?v=4.0"></script>
+  <script src="app.js?v=4.1"></script>
 </body>
 </html>

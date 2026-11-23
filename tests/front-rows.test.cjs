@@ -101,3 +101,42 @@ test('empty preferences use the whole room and preserve duplicate roster entries
   }
   assert.equal(rows.size, 3);
 });
+
+test('public fixed seats take priority at both ends of a conflicting private assignment', () => {
+  const locks = new Map([[0, '가람'], [7, '나은'], [10, 'Da Yeon']]);
+  const publicLocks = new Map([[0, '나은']]);
+  const draw = classroom({ locks, publicLocks });
+  for (let i = 0; i < 60; i++) {
+    const { success, assignment } = draw();
+    assert.ok(success);
+    assertRoster(assignment);
+    assert.equal(assignment[0], '나은');
+    assert.equal(assignment[10], 'Da Yeon');
+  }
+  publicLocks.clear();
+  const { assignment } = draw();
+  assert.equal(assignment[0], '가람');
+  assert.equal(assignment[7], '나은');
+  assert.equal(assignment[10], 'Da Yeon');
+});
+
+test('a public seat must satisfy front-row and separation constraints', () => {
+  const publicLocks = new Map([[2, '나은']]);
+  const draw = classroom({
+    publicLocks, frontStudentsText: '나은, 가람', disabledSeats: new Set([1]),
+    separatedPairs: [['나은', '보람']]
+  });
+  for (let i = 0; i < 40; i++) {
+    const { success, assignment } = draw();
+    assert.ok(success);
+    assertRoster(assignment);
+    assert.equal(assignment[2], '나은');
+    assert.ok([0, 3].includes(assignment.indexOf('가람')));
+    assert.ok([0, 4, 8, 9, 10, 11].includes(assignment.indexOf('보람')));
+  }
+  publicLocks.set(3, '보람');
+  assert.equal(draw().success, false);
+  publicLocks.delete(3);
+  publicLocks.set(11, '가람');
+  assert.equal(draw().success, false);
+});

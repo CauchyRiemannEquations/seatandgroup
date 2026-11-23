@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seat &amp; Group · 교실 자리 배치</title>
-  <meta name="description" content="학급 명단으로 자리 배치, 조 짜기, 랜덤 뽑기를 진행하세요. 앞자리 희망자는 교탁 앞 한 줄 또는 두 줄에 무작위로 배치할 수 있습니다.">
+  <meta name="description" content="학생 이름만 입력하고 자리 배치, 조 짜기, 랜덤 뽑기를 시작하세요. 자주 쓰는 명단은 학급으로 저장할 수 있습니다. 앞자리 희망자는 교탁 앞 한 줄 또는 두 줄에 무작위로 배치할 수 있습니다.">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="index.css?v=3.0">
+  <link rel="stylesheet" href="index.css?v=3.2">
   <!-- html2canvas CDN for PNG saving -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- jsPDF CDN for PDF saving -->
@@ -39,54 +39,44 @@
             <span>랜덤 뽑기</span>
           </button>
         </nav>
-      <!-- Theme Switcher Toggle -->
-      <button type="button" class="theme-toggle-btn" id="btn-theme-toggle" title="화면 테마 전환" aria-label="화면 테마 전환">
-        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon sun-icon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon moon-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-      </button>
+        <div class="header-actions">
+          <button type="button" class="btn header-help" id="btn-open-help" aria-haspopup="dialog" aria-controls="usage-help-dialog">
+            <svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 5.5c3.4-1.1 6.6-.8 9 1.1 2.4-1.9 5.6-2.2 9-1.1V19c-3.4-1.1-6.6-.8-9 1-2.4-1.8-5.6-2.1-9-1Z"/><path d="M12 6.6V20"/></svg>
+            이용 방법
+          </button>
+          <button type="button" class="theme-toggle-btn" id="btn-theme-toggle" title="화면 테마 전환" aria-label="화면 테마 전환">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon sun-icon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon moon-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </button>
+        </div>
       </div>
     </header>
 
     <div class="main-layout">
       <!-- Left Panel: Configuration & Inputs -->
       <aside class="sidebar-panel card" id="class-settings" aria-labelledby="settings-title">
-        <div class="sidebar-heading"><span class="section-mark"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h3m5 0h8M4 12h8m5 0h3M4 18h3m5 0h8"/><circle cx="9.5" cy="6" r="2.5"/><circle cx="14.5" cy="12" r="2.5"/><circle cx="9.5" cy="18" r="2.5"/></svg></span><h2 id="settings-title">학급 설정</h2><a class="mobile-return" href="#workspace">결과로 ↑</a></div>
-        <!-- Class Group Selector Section -->
-        <section class="settings-section">
-          <div class="section-title">
-            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <h3><label for="class-select">사용할 학급</label></h3>
+        <div class="sidebar-heading"><span class="section-mark"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h3m5 0h8M4 12h8m5 0h3M4 18h3m5 0h8"/><circle cx="9.5" cy="6" r="2.5"/><circle cx="14.5" cy="12" r="2.5"/><circle cx="9.5" cy="18" r="2.5"/></svg></span><h2 id="settings-title">명단 설정</h2><a class="mobile-return" href="#workspace">결과 보기 ↓</a></div>
+        <section class="settings-section roster-entry" id="roster-entry" aria-labelledby="roster-label">
+          <div class="roster-actions">
+            <button type="button" class="btn btn-secondary" id="btn-quick-roster" aria-pressed="true">바로 사용</button>
+            <button type="button" class="btn btn-secondary" id="btn-create-class" aria-haspopup="dialog" aria-controls="create-class-dialog">학급 만들기</button>
           </div>
-          <div class="class-manager-wrapper">
-            <div class="select-class-row">
-              <select id="class-select" class="class-select-box" title="현재 학급 명단 그룹 변경">
-                <!-- Dynamically populated in JS -->
-              </select>
-              <button type="button" class="btn btn-secondary btn-icon-only" id="btn-delete-class" title="선택된 학급 삭제">
-                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-              </button>
-            </div>
-
-            <details class="class-save-details">
-              <summary>새 학급으로 저장</summary>
-              <div class="save-class-row">
-              <input type="text" id="new-class-name" placeholder="새 학급 이름" spellcheck="false" title="새 학급 이름">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-save-class">저장</button>
-              </div>
-            </details>
-          </div>
-        </section>
-
-        <!-- Student Input Section -->
-        <section class="settings-section">
           <div class="section-title">
-            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <h3><label for="student-list">학생 명단</label></h3>
+            <h3><label id="roster-label" for="student-list">학생 명단</label></h3>
             <span class="student-count-badge"><span id="student-count">0</span>명</span>
           </div>
           <div class="input-container">
-            <textarea id="student-list" placeholder="학생 이름을 입력하세요" spellcheck="false"></textarea>
-            <p class="field-note">이름은 한 줄에 한 명씩, 또는 쉼표로 구분해 주세요.</p>
+            <textarea id="student-list" rows="4" placeholder="학생 이름을 입력하세요" spellcheck="false" aria-describedby="roster-hint"></textarea>
+            <p class="field-note" id="roster-hint">이름을 한 줄에 한 명씩 또는 쉼표로 구분해 주세요.</p>
+          </div>
+          <div id="saved-class-controls" class="saved-class-controls" hidden>
+            <label for="class-select">저장한 학급</label>
+            <div class="select-class-row">
+              <select id="class-select" class="class-select-box"></select>
+              <button type="button" class="btn btn-secondary btn-icon-only" id="btn-delete-class" title="이 학급 삭제" aria-label="이 학급 삭제" hidden>
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -132,7 +122,7 @@
           </div>
 
           <div class="layout-hint">
-            <span>배치도에서 좌석을 누르면 통로로 바뀝니다. 다시 누르면 좌석으로 돌아옵니다.</span>
+            <span>지정되지 않은 좌석을 한 번 누르면 통로로, 다시 누르면 좌석으로 바뀝니다. 두 번 누르면 학생을 지정할 수 있습니다.</span>
           </div>
         </section>
 
@@ -177,7 +167,10 @@
           <div class="workspace-heading">
             <h1>자리 배치</h1>
             <div class="heading-actions">
-              <a class="mobile-settings-link" href="#front-row-settings">앞자리 설정</a>
+              <div class="workspace-jumps">
+                <a class="mobile-settings-link" href="#student-list">명단 입력</a>
+                <a class="mobile-settings-link" href="#front-row-settings">앞자리 설정</a>
+              </div>
               <button type="button" class="btn btn-primary btn-lg" id="btn-shuffle"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3c4.5 0 6.5 12 11 12h4m-4-4 4 4-4 4M3 18h3c1.6 0 3-1.6 4.3-3.8M13.6 9.7C14.7 7.6 15.8 6 17 6h4m-4-4 4 4-4 4"/></svg><span>무작위 배치</span></button>
             </div>
           </div>
@@ -186,6 +179,10 @@
             <h2><span class="sheet-icon"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V4h4m10 0h4v3M3 17v3h4m10 0h4v-3"/><rect x="7" y="8" width="3" height="2" rx=".5"/><rect x="14" y="8" width="3" height="2" rx=".5"/><rect x="7" y="14" width="3" height="2" rx=".5"/><rect x="14" y="14" width="3" height="2" rx=".5"/></svg></span>교실 배치도</h2>
 
             <div class="utility-actions">
+              <button type="button" class="btn btn-icon seat-assign-action" id="btn-seat-assign" aria-haspopup="dialog" aria-controls="public-seat-dialog">
+                <svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="9" rx="2"/><path d="M5 13v5m9-5v2m-8 3h5m5 1 2 2 4-5"/></svg>
+                좌석 지정
+              </button>
               <button type="button" class="btn btn-icon" id="btn-flip-view" title="교탁 시점 보기 (같은 배치를 교탁에서 학생들을 바라본 모습으로 180도 회전)">
                 <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
                 <span>교탁 시점</span>
@@ -221,6 +218,7 @@
           </div>
           <div class="map-legend" aria-label="배치도 범례">
             <span><i class="legend-seat"></i>좌석</span>
+            <span><i class="legend-fixed"></i>지정석</span>
             <span><i class="legend-front"></i>앞자리 범위</span>
             <span><i class="legend-aisle"></i>통로</span>
           </div>
@@ -279,7 +277,7 @@
           <div class="workspace-heading">
             <h1>조 짜기</h1>
             <div class="heading-actions">
-              <a class="mobile-settings-link" href="#class-settings">학급 설정</a>
+              <a class="mobile-settings-link" href="#student-list">명단 입력</a>
               <button type="button" class="btn btn-primary btn-lg" id="btn-group-shuffle"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3c4.5 0 6.5 12 11 12h4m-4-4 4 4-4 4M3 18h3c1.6 0 3-1.6 4.3-3.8M13.6 9.7C14.7 7.6 15.8 6 17 6h4m-4-4 4 4-4 4"/></svg><span>조 짜기 시작</span></button>
             </div>
           </div>
@@ -329,7 +327,7 @@
           <div class="workspace-heading">
             <h1>랜덤 뽑기</h1>
             <div class="heading-actions">
-              <a class="mobile-settings-link" href="#class-settings">학급 설정</a>
+              <a class="mobile-settings-link" href="#student-list">명단 입력</a>
               <button type="button" class="btn btn-primary btn-lg" id="btn-picker-start"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 2v2m0 4v2"/></svg><span>추첨 시작</span></button>
             </div>
           </div>
@@ -373,10 +371,85 @@
     </div>
   </div>
 
+  <dialog id="usage-help-dialog" class="app-dialog help-dialog" aria-labelledby="usage-help-title">
+    <header class="help-heading">
+      <h2 id="usage-help-title"><span class="sheet-icon"><svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 5.5c3.4-1.1 6.6-.8 9 1.1 2.4-1.9 5.6-2.2 9-1.1V19c-3.4-1.1-6.6-.8-9 1-2.4-1.8-5.6-2.1-9-1Z"/><path d="M12 6.6V20"/></svg></span>이용 방법</h2>
+      <button id="btn-close-help" type="button" class="btn" autofocus>닫기</button>
+    </header>
+    <div class="help-content" tabindex="0" role="region" aria-label="기능별 이용 방법">
+      <section class="help-section help-roster">
+        <h3>명단 입력</h3>
+        <p><strong>바로 사용</strong>에서 이름을 줄바꿈이나 쉼표로 구분해 입력하세요. 자주 쓰는 반은 <strong>학급 만들기</strong>에서 학급 이름과 명단을 함께 저장하세요.</p>
+      </section>
+      <section class="help-section help-seating">
+        <h3>자리 배치</h3>
+        <p><strong>교실 구조</strong>에서 줄·열이나 배치 유형을 정하고, 필요한 좌석을 지정한 뒤 <strong>무작위 배치</strong>를 누르세요.</p>
+        <dl class="seat-guide">
+          <div><dt>좌석 지정</dt><dd>책상을 두 번 누르거나 <strong>좌석 지정</strong> 버튼에서 자리와 학생을 고르세요. 지정석은 다시 배치해도 유지됩니다. 지정석을 누르면 학생을 바꾸거나 <strong>지정 해제</strong>할 수 있습니다.</dd></div>
+          <div><dt>통로</dt><dd>지정되지 않은 책상을 한 번 누르면 통로가 됩니다. 통로를 다시 누르면 책상으로 돌아옵니다.</dd></div>
+          <div><dt>앞자리</dt><dd><strong>앞자리 희망자</strong>에서 교탁 기준 앞 1줄 또는 2줄을 고르고 이름을 입력하면, 그 범위 안에서 자리를 뽑습니다.</dd></div>
+          <div><dt>결과 저장</dt><dd><strong>교탁 시점</strong>으로 배치도를 돌려 볼 수 있습니다. 배치 후 학생용 또는 교사용을 골라 PDF나 PNG로 저장하세요.</dd></div>
+        </dl>
+        <p class="guide-keys">키보드로 책상을 선택하고 <kbd>Enter</kbd>를 눌러 좌석을 지정하세요. 지정되지 않은 자리에서는 <kbd>Space</kbd>로 좌석과 통로를 바꿀 수 있습니다.</p>
+      </section>
+      <section class="help-section help-groups">
+        <h3>조 짜기</h3>
+        <p>한 조의 목표 인원을 정하고 <strong>조 짜기 시작</strong>을 누르세요. 결과는 이미지로 저장하거나 텍스트로 복사할 수 있습니다.</p>
+      </section>
+      <section class="help-section help-picker">
+        <h3>랜덤 뽑기</h3>
+        <p>뽑을 인원수를 정하고 <strong>추첨 시작</strong>을 누르세요. 뽑힌 학생의 명단은 <strong>결과 텍스트 복사</strong>로 가져올 수 있습니다.</p>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="public-seat-dialog" class="app-dialog seat-dialog" aria-labelledby="public-seat-title">
+    <form id="public-seat-form" class="class-form">
+      <div class="seat-form-heading">
+        <h2 id="public-seat-title">좌석 지정</h2>
+        <p>무작위 배치 후에도 선택한 학생은 이 자리에 앉습니다.</p>
+      </div>
+      <div class="class-form-field">
+        <label for="public-seat-position">좌석</label>
+        <select id="public-seat-position" class="class-select-box" aria-describedby="public-seat-hint"></select>
+      </div>
+      <div class="class-form-field">
+        <label for="public-seat-student">학생</label>
+        <select id="public-seat-student" class="class-select-box" aria-describedby="public-seat-hint"></select>
+      </div>
+      <p id="public-seat-hint" class="field-note" aria-live="polite"></p>
+      <div class="class-form-actions">
+        <button id="btn-public-seat-clear" type="button" class="btn" hidden>지정 해제</button>
+        <button id="btn-public-seat-cancel" type="button" class="btn">취소</button>
+        <button id="btn-public-seat-save" type="submit" class="btn btn-primary">지정하기</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="create-class-dialog" class="app-dialog class-dialog" aria-labelledby="create-class-title">
+    <form id="create-class-form" class="class-form" novalidate>
+      <h2 id="create-class-title">학급 만들기</h2>
+      <div class="class-form-field">
+        <label for="new-class-name">학급 이름</label>
+        <input id="new-class-name" type="text" placeholder="예: 2학년 1반" autocomplete="off" required autofocus aria-describedby="class-form-error">
+      </div>
+      <div class="class-form-field">
+        <label for="new-class-students">학생 명단</label>
+        <textarea id="new-class-students" rows="5" placeholder="학생 이름을 입력하세요" spellcheck="false" aria-describedby="new-class-hint class-form-error" required></textarea>
+        <p id="new-class-hint" class="field-note">이름을 한 줄에 한 명씩 또는 쉼표로 구분해 주세요.</p>
+      </div>
+      <p id="class-form-error" role="alert" hidden></p>
+      <div class="class-form-actions">
+        <button id="btn-cancel-class" type="button" class="btn btn-secondary">취소</button>
+        <button id="btn-save-class" type="submit" class="btn btn-primary">학급 저장</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Custom Alert Toast -->
   <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
   <!-- JavaScript -->
-  <script src="app.js?v=3.0"></script>
+  <script src="app.js?v=3.2"></script>
 </body>
 </html>

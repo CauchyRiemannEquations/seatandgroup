@@ -6,8 +6,9 @@
 // 1. 애플리케이션 상태 관리 객체 (State)
 const state = {
   // 학급 목록 (Map형식의 Object: { '학급명': { studentsText, disabledSeats, locks, separatedPairs, lastAssignment, lastGroupAssignment, rows, cols } })
-  classes: {},
-  activeClass: '1학년 1반 예시', // 현재 활성화된 학급명
+  classes: Object.create(null),
+  quickRoster: {},
+  activeClass: '', // 빈 문자열은 학급을 선택하지 않은 바로 사용 명단
   
   // 현재 학급의 바인딩된 상태 변수들
   rows: 5,
@@ -53,9 +54,17 @@ const DOM = {
   
   // 학급 관리
   classSelect: document.getElementById('class-select'),
+  savedClassControls: document.getElementById('saved-class-controls'),
+  rosterLabel: document.getElementById('roster-label'),
+  btnQuickRoster: document.getElementById('btn-quick-roster'),
+  btnCreateClass: document.getElementById('btn-create-class'),
+  classDialog: document.getElementById('create-class-dialog'),
+  classForm: document.getElementById('create-class-form'),
+  classFormError: document.getElementById('class-form-error'),
+  newClassStudents: document.getElementById('new-class-students'),
+  btnCancelClass: document.getElementById('btn-cancel-class'),
   btnDeleteClass: document.getElementById('btn-delete-class'),
   newClassName: document.getElementById('new-class-name'),
-  btnSaveClass: document.getElementById('btn-save-class'),
   
   // 학생 명단 및 레이아웃 설정
   studentList: document.getElementById('student-list'),
@@ -215,83 +224,68 @@ function showToast(message, type = 'success') {
 }
 
 // 5. 학급(그룹) 관리 로직
-const DEFAULT_CLASSES = {
-  '1학년 1반 예시': {
-    studentsText: '강민준\n권도윤\n김도현\n김민재\n김우진\n김준우\n김지호\n박민준\n박서준\n박예준\n서우진\n송민우\n신도윤\n안지후\n양도현\n오재원\n유태양\n윤도현\n이건우\n이도현\n이민우\n이서준\n임지훈\n정민준\n조현우',
-    disabledSeats: [],
-    locks: [],
-    separatedPairs: [['김민재', '김우진'], ['이서준', '정민준']],
-    lastAssignment: [],
-    lastGroupAssignment: [],
-    rows: 5,
-    cols: 6
-  },
-  '1학년 2반 예시': {
-    studentsText: '김가은\n김나은\n김다은\n김민서\n김서아\n김서연\n김서현\n김수아\n김수빈\n김아윤\n김예은\n김지민\n김지아\n김지안\n김지우\n김지유\n김하은\n박서윤\n박소율\n박아린\n박채원\n서아윤\n서윤아\n신지우\n윤서연\n이서윤\n이서현\n이소율',
-    disabledSeats: [2, 3, 4, 5, 10, 11, 12, 13, 18, 19, 20, 21, 26, 27, 28, 29, 34, 35, 36, 37], // 28석 U자 배치
-    locks: [],
-    separatedPairs: [['김가은', '김나은']],
-    lastAssignment: [],
-    lastGroupAssignment: [],
-    rows: 6,
-    cols: 8
-  }
-};
+const CLASSES_KEY = 'seat_arranger_classes_package';
+const QUICK_ROSTER_KEY = 'seat_arranger_quick_roster';
+const ACTIVE_CLASS_KEY = 'seat_arranger_active_class_name';
 
-// 학급 로컬스토리지 보존
-function saveClassesToStorage() {
-  // 현재 활성화된 학급 데이터를 객체에 최신화하여 백업
-  captureCurrentClassState();
-  
-  // 전체 직렬화
-  const dataToSave = {};
-  for (const name in state.classes) {
-    const cl = state.classes[name];
-    dataToSave[name] = {
-      studentsText: cl.studentsText,
-      frontRows: cl.frontRows,
-      frontStudentsText: cl.frontStudentsText,
-      disabledSeats: Array.from(cl.disabledSeats),
-      locks: Array.from(cl.locks.entries()),
-      separatedPairs: cl.separatedPairs,
-      lastAssignment: cl.lastAssignment,
-      lastGroupAssignment: cl.lastGroupAssignment,
-      lastPickerAssignment: cl.lastPickerAssignment || [],
-      rows: cl.rows,
-      cols: cl.cols
-    };
+function readStoredRecord(key) {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return Object.create(null);
+  try {
+    const record = JSON.parse(raw);
+    if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('Invalid saved roster');
+    return Object.assign(Object.create(null), record);
+  } catch (error) {
+    // Keep the exact old bytes before making a fresh workspace available.
+    localStorage.setItem(`${key}_recovery_${Date.now()}`, raw);
+    localStorage.removeItem(key);
+    console.warn('Could not parse saved roster', error);
+    showToast('이전 명단의 저장 형식을 읽을 수 없어 원본을 백업했습니다.', 'warning');
+    return Object.create(null);
   }
-  
-  localStorage.setItem('seat_arranger_classes_package', JSON.stringify(dataToSave));
-  localStorage.setItem('seat_arranger_active_class_name', state.activeClass);
 }
 
-// 현재 활성화 상태를 학급 데이터 캐시에 반영
-function captureCurrentClassState() {
-  if (!state.activeClass) return;
-  
-  state.classes[state.activeClass] = {
+function saveClassesToStorage() {
+  const current = {
     studentsText: DOM.studentList.value,
     frontRows: state.frontRows,
     frontStudentsText: state.frontStudentsText,
-    disabledSeats: new Set(state.disabledSeats),
-    locks: new Map(state.locks),
-    separatedPairs: [...state.separatedPairs],
-    lastAssignment: [...state.assignment],
-    lastGroupAssignment: [...state.lastGroupAssignment],
-    lastPickerAssignment: [...state.lastPickerAssignment],
+    disabledSeats: [...state.disabledSeats],
+    locks: [...state.locks],
+    separatedPairs: state.separatedPairs,
+    lastAssignment: state.assignment,
+    lastGroupAssignment: state.lastGroupAssignment,
+    lastPickerAssignment: state.lastPickerAssignment,
+    targetGroupSize: state.targetGroupSize,
+    targetPickerCount: state.targetPickerCount,
     rows: state.rows,
     cols: state.cols
   };
+  try {
+    if (state.activeClass) {
+      // Merge this class only, keeping other classes edited in another tab.
+      state.classes[state.activeClass] = current;
+      const classes = readStoredRecord(CLASSES_KEY);
+      if (!Object.hasOwn(classes, state.activeClass)) return;
+      classes[state.activeClass] = current;
+      localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
+      state.classes = classes;
+    } else {
+      state.quickRoster = current;
+      readStoredRecord(QUICK_ROSTER_KEY);
+      localStorage.setItem(QUICK_ROSTER_KEY, JSON.stringify(current));
+    }
+  } catch (error) {
+    console.error(error);
+    showToast('명단 변경 사항을 저장할 수 없습니다. 브라우저 저장 공간을 확인해 주세요.', 'warning');
+  }
 }
 
-// 학급 불러오기 및 UI 주입
 function loadClassData(className) {
-  const cl = state.classes[className];
+  const cl = className ? state.classes[className] : state.quickRoster;
   if (!cl) return;
-  
   state.activeClass = className;
-  
+
   // 상태 변수 매핑
   state.rows = cl.rows || 5;
   state.cols = cl.cols || 6;
@@ -303,6 +297,10 @@ function loadClassData(className) {
   state.assignment = cl.lastAssignment || [];
   state.lastGroupAssignment = cl.lastGroupAssignment || [];
   state.lastPickerAssignment = cl.lastPickerAssignment || [];
+  state.targetGroupSize = cl.targetGroupSize || 4;
+  state.targetPickerCount = cl.targetPickerCount || 1;
+  DOM.groupSize.value = state.targetGroupSize;
+  DOM.groupSizeVal.textContent = state.targetGroupSize;
   
   // UI 바인딩
   DOM.studentList.value = cl.studentsText || '';
@@ -323,6 +321,9 @@ function loadClassData(className) {
   
   // 드롭다운 업데이트
   DOM.classSelect.value = className;
+  DOM.btnQuickRoster.setAttribute('aria-pressed', String(!className));
+  DOM.btnDeleteClass.hidden = !className;
+  DOM.rosterLabel.textContent = className ? `${className} 학생 명단` : '학생 명단';
   
   updateSeparationsList();
 }
@@ -330,8 +331,14 @@ function loadClassData(className) {
 // 드롭다운 채우기
 function populateClassSelectDropdown() {
   DOM.classSelect.innerHTML = '';
-  
-  for (const name in state.classes) {
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '학급 선택';
+  placeholder.disabled = true;
+  DOM.classSelect.appendChild(placeholder);
+  const names = Object.keys(state.classes);
+  DOM.savedClassControls.hidden = names.length === 0;
+  for (const name of names) {
     const opt = document.createElement('option');
     opt.value = name;
     opt.textContent = name;
@@ -348,9 +355,16 @@ function splitStudentNames(text) {
     .filter(name => name.length > 0);
 }
 
+// 이름표 템플릿에서도 번호나 기호가 포함된 명단을 입력한 그대로 표시한다.
+function nameAsHtmlText(name) {
+  return name.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
 // 학생 리스트 파싱
 function parseStudents(shouldSave = true) {
-  state.students = splitStudentNames(DOM.studentList.value);
+  const names = splitStudentNames(DOM.studentList.value);
+  const changed = names.length !== state.students.length || names.some((name, i) => name !== state.students[i]);
+  state.students = names;
   
   DOM.studentCount.textContent = state.students.length;
   
@@ -369,6 +383,15 @@ function parseStudents(shouldSave = true) {
   updateModalStudentSelects();
   
   if (shouldSave) {
+    if (changed) {
+      state.assignment = [];
+      state.lastGroupAssignment = [];
+      state.lastPickerAssignment = [];
+      buildGrid();
+      renderGroupsList();
+      renderPickerList();
+      updateSeparationsList();
+    }
     saveClassesToStorage();
   }
 }
@@ -856,6 +879,7 @@ function lockShuffleControls() {
 DOM.groupSize.addEventListener('input', (e) => {
   state.targetGroupSize = parseInt(e.target.value);
   DOM.groupSizeVal.textContent = state.targetGroupSize;
+  saveClassesToStorage();
 });
 
 // 균등 조 짜기 메인 함수
@@ -913,7 +937,7 @@ function runGroupShuffle() {
           <span class="group-members-count">${size}명</span>
         </div>
         <ul class="group-members-list">
-          ${members.map(m => `<li class="group-member-item">${m}</li>`).join('')}
+          ${members.map(m => `<li class="group-member-item">${nameAsHtmlText(m)}</li>`).join('')}
         </ul>
       `;
       DOM.groupsBoard.appendChild(card);
@@ -1040,7 +1064,7 @@ function renderGroupsList() {
         ${group.map(m => `
           <li class="group-member-item">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="member-icon"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span>${m}</span>
+            <span>${nameAsHtmlText(m)}</span>
           </li>
         `).join('')}
       </ul>
@@ -1062,6 +1086,7 @@ if (DOM.pickerCount) {
   DOM.pickerCount.addEventListener('input', (e) => {
     state.targetPickerCount = parseInt(e.target.value);
     DOM.pickerCountVal.textContent = state.targetPickerCount;
+    saveClassesToStorage();
   });
 }
 
@@ -1130,23 +1155,8 @@ function completePickerShuffle() {
   const winners = pool.slice(0, state.targetPickerCount);
   state.lastPickerAssignment = winners;
   
-  // 결과물 렌더링
-  DOM.pickerBoard.innerHTML = '';
-  
-  winners.forEach((winner, index) => {
-    const ticket = document.createElement('div');
-    ticket.className = 'picker-golden-ticket';
-    // stager animation delay
-    ticket.style.animationDelay = `${index * 0.2}s`;
-    ticket.innerHTML = `
-      <div class="picker-golden-ticket-inner">
-        <span class="seat-index">당첨 티켓 #${index + 1}</span>
-        <span class="student-name">${winner}</span>
-      </div>
-    `;
-    DOM.pickerBoard.appendChild(ticket);
-  });
-  
+  renderPickerList(0.2);
+
   playSuccessSound();
   showToast(`🎉 랜덤으로 ${state.targetPickerCount}명의 학생이 성공적으로 뽑혔습니다!`);
   
@@ -1156,7 +1166,7 @@ function completePickerShuffle() {
   saveClassesToStorage();
 }
 
-function renderPickerList() {
+function renderPickerList(delayStep = 0.05) {
   DOM.pickerBoard.innerHTML = '';
   
   if (!state.lastPickerAssignment || state.lastPickerAssignment.length === 0) {
@@ -1172,13 +1182,14 @@ function renderPickerList() {
   state.lastPickerAssignment.forEach((winner, index) => {
     const ticket = document.createElement('div');
     ticket.className = 'picker-golden-ticket';
-    ticket.style.animationDelay = `${index * 0.05}s`;
+    ticket.style.animationDelay = `${index * delayStep}s`;
     ticket.innerHTML = `
       <div class="picker-golden-ticket-inner">
         <span class="seat-index">당첨 티켓 #${index + 1}</span>
-        <span class="student-name">${winner}</span>
+        <span class="student-name"></span>
       </div>
     `;
+    ticket.querySelector('.student-name').textContent = winner;
     DOM.pickerBoard.appendChild(ticket);
   });
   
@@ -1188,7 +1199,7 @@ function renderPickerList() {
 function copyPickerText() {
   if (state.isShuffling || !state.lastPickerAssignment || state.lastPickerAssignment.length === 0) return;
   
-  let out = `🎲 [${state.activeClass} 랜덤 추첨 결과]\n`;
+  let out = `🎲 [${state.activeClass || '바로 사용'} 랜덤 추첨 결과]\n`;
   out += `=======================\n`;
   state.lastPickerAssignment.forEach((winner, index) => {
     out += `당첨 #${index + 1}: ${winner}\n`;
@@ -1373,76 +1384,78 @@ function countSeparationViolations(assignment) {
 // 12. 학급 그룹 관리 세부 핸들러 (Save / Delete / Load)
 // ============================================================================
 
-DOM.classSelect.addEventListener('change', (e) => {
-  // 학급 전환 전에 현재 학급 정보를 임시 백업 보존
-  captureCurrentClassState();
-  
-  const targetClass = e.target.value;
-  loadClassData(targetClass);
-  saveClassesToStorage();
-  
-  showToast(`[${targetClass}] 그룹이 성공적으로 로드되었습니다.`);
+function switchRoster(name) {
+  loadClassData(name);
+  localStorage.setItem(ACTIVE_CLASS_KEY, name);
+}
+
+DOM.classSelect.addEventListener('change', () => {
+  switchRoster(DOM.classSelect.value);
 });
 
-DOM.btnSaveClass.addEventListener('click', () => {
+DOM.btnQuickRoster.addEventListener('click', () => {
+  switchRoster('');
+  DOM.studentList.focus();
+});
+
+DOM.btnCreateClass.addEventListener('click', () => {
+  DOM.classForm.reset();
+  clearClassFormError();
+  DOM.classDialog.showModal();
+});
+
+DOM.btnCancelClass.addEventListener('click', () => DOM.classDialog.close());
+
+function clearClassFormError() {
+  DOM.classFormError.hidden = true;
+  DOM.newClassName.removeAttribute('aria-invalid');
+  DOM.newClassStudents.removeAttribute('aria-invalid');
+}
+
+function showClassFormError(field, message) {
+  DOM.classFormError.textContent = message;
+  DOM.classFormError.hidden = false;
+  field.setAttribute('aria-invalid', 'true');
+  field.focus();
+}
+
+DOM.classForm.addEventListener('input', clearClassFormError);
+DOM.classForm.addEventListener('submit', event => {
+  event.preventDefault();
   const name = DOM.newClassName.value.trim();
-  
-  if (!name) {
-    showToast("저장할 학급 이름을 입력해주세요.", "warning");
+  const studentsText = DOM.newClassStudents.value.trim();
+  if (!name) return showClassFormError(DOM.newClassName, '학급 이름을 입력해 주세요.');
+  if (!splitStudentNames(studentsText).length) return showClassFormError(DOM.newClassStudents, '학생 이름을 한 명 이상 입력해 주세요.');
+
+  try {
+    const classes = readStoredRecord(CLASSES_KEY);
+    if (Object.hasOwn(classes, name)) return showClassFormError(DOM.newClassName, '같은 이름의 학급이 있습니다. 다른 이름을 입력해 주세요.');
+    classes[name] = { studentsText };
+    localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
+    state.classes = classes;
+  } catch (error) {
+    console.error(error);
+    DOM.classFormError.textContent = '학급을 저장할 수 없습니다. 브라우저 저장 공간을 확인해 주세요.';
+    DOM.classFormError.hidden = false;
     return;
   }
-  
-  // 현재 활성화 상태 백업
-  captureCurrentClassState();
-  
-  // 새 학급 정보 생성
-  state.classes[name] = {
-    studentsText: DOM.studentList.value,
-    frontRows: state.frontRows,
-    frontStudentsText: state.frontStudentsText,
-    disabledSeats: new Set(state.disabledSeats),
-    locks: new Map(state.locks),
-    separatedPairs: [...state.separatedPairs],
-    lastAssignment: [...state.assignment],
-    lastGroupAssignment: [...state.lastGroupAssignment],
-    rows: state.rows,
-    cols: state.cols
-  };
-  
-  state.activeClass = name;
-  DOM.newClassName.value = '';
-  
   populateClassSelectDropdown();
-  saveClassesToStorage();
-  loadClassData(name);
-  
-  showToast(`[${name}] 그룹이 성공적으로 신규 저장되었습니다!`);
+  switchRoster(name);
+  DOM.classDialog.close();
+  showToast(`${name} 학급을 저장했습니다.`);
 });
 
 DOM.btnDeleteClass.addEventListener('click', () => {
-  const keys = Object.keys(state.classes);
-  if (keys.length <= 1) {
-    showToast("최소 한 개의 학급 그룹이 남아있어야 하므로 삭제할 수 없습니다.", "danger");
-    return;
-  }
-  
-  const toDelete = state.activeClass;
-  
-  if (confirm(`정말로 [${toDelete}] 그룹을 영구히 삭제하시겠습니까?`)) {
-    delete state.classes[toDelete];
-    
-    // 남은 학급 중 첫 번째로 로드
-    const remainingClass = Object.keys(state.classes)[0];
-    state.activeClass = remainingClass;
-    
-    populateClassSelectDropdown();
-    loadClassData(remainingClass);
-    saveClassesToStorage();
-    
-    showToast(`[${toDelete}] 그룹이 성공적으로 영구 삭제되었습니다.`);
-  }
+  const name = state.activeClass;
+  if (!name || !confirm(`[${name}] 학급과 저장된 결과를 삭제할까요?`)) return;
+  const classes = readStoredRecord(CLASSES_KEY);
+  delete classes[name];
+  localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
+  state.classes = classes;
+  populateClassSelectDropdown();
+  switchRoster('');
+  showToast(`${name} 학급을 삭제했습니다.`);
 });
-
 
 // ============================================================================
 // 13. 라이트 / 다크 테마 전환 스크립트
@@ -1510,11 +1523,10 @@ if (DOM.appTitleTrigger) {
 }
 
 function updateModalStudentSelects() {
-  const options = ['<option value="">-- 학생 선택 --</option>'];
-  state.students.forEach(n => options.push(`<option value="${n}">${n}</option>`));
-  const html = options.join('');
-  if (DOM.sepStudent1) DOM.sepStudent1.innerHTML = html;
-  if (DOM.sepStudent2) DOM.sepStudent2.innerHTML = html;
+  for (const select of [DOM.sepStudent1, DOM.sepStudent2]) {
+    select.replaceChildren(new Option('-- 학생 선택 --', ''));
+    for (const name of state.students) select.add(new Option(name, name));
+  }
 }
 
 DOM.btnAddSep.addEventListener('click', () => {
@@ -1554,7 +1566,7 @@ function updateSeparationsList() {
       count++;
       const li = document.createElement('li');
       li.innerHTML = `
-        <span><strong>${s1}</strong> &lt;&gt; <strong>${s2}</strong> (분리)</span>
+        <span><strong>${nameAsHtmlText(s1)}</strong> &lt;&gt; <strong>${nameAsHtmlText(s2)}</strong> (분리)</span>
         <button type="button" class="btn-delete-rule" data-idx="${idx}">제거</button>
       `;
       DOM.sepsListUl.appendChild(li);
@@ -1669,7 +1681,7 @@ async function saveSeatingChart(isTeacherView, format) {
   const prevFlipped = state.isFlippedView;
   const dateStr = new Date().toISOString().slice(0, 10);
   const bg = getCaptureBgColor();
-  const baseName = `자리배치결과_${state.activeClass}_${dateStr}_${viewLabel}`;
+  const baseName = `자리배치결과_${state.activeClass || '바로 사용'}_${dateStr}_${viewLabel}`;
 
   document.body.classList.add('html2canvas-capturing');
 
@@ -1737,7 +1749,7 @@ DOM.btnGroupSaveImage.addEventListener('click', () => {
       }).then(canvas => {
         document.body.classList.remove('html2canvas-capturing');
         const link = document.createElement('a');
-        link.download = `모둠편성결과_${state.activeClass}_${new Date().toISOString().slice(0, 10)}.png`;
+        link.download = `모둠편성결과_${state.activeClass || '바로 사용'}_${new Date().toISOString().slice(0, 10)}.png`;
         link.href = canvas.toDataURL('image/png');
         document.body.appendChild(link);
         link.click();
@@ -1759,7 +1771,7 @@ DOM.btnGroupSaveImage.addEventListener('click', () => {
 DOM.btnGroupCopyText.addEventListener('click', () => {
   if (state.isShuffling || state.lastGroupAssignment.length === 0) return;
   
-  let out = `👥 [${state.activeClass} 소그룹 조 편성표]\n`;
+  let out = `👥 [${state.activeClass || '바로 사용'} 소그룹 조 편성표]\n`;
   out += `=======================\n`;
   state.lastGroupAssignment.forEach((group, index) => {
     out += `${index + 1}조 (${group.length}명): ${group.join(', ')}\n`;
@@ -1777,61 +1789,20 @@ DOM.btnGroupCopyText.addEventListener('click', () => {
 // ============================================================================
 
 function initClasses() {
-  const saved = localStorage.getItem('seat_arranger_classes_package');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      state.classes = {};
-      for (const name in parsed) {
-        const cl = parsed[name];
-        state.classes[name] = {
-          studentsText: cl.studentsText,
-          frontRows: cl.frontRows === 2 ? 2 : 1,
-          frontStudentsText: typeof cl.frontStudentsText === 'string' ? cl.frontStudentsText : '',
-          disabledSeats: new Set(cl.disabledSeats || []),
-          locks: new Map(cl.locks || []),
-          separatedPairs: cl.separatedPairs || [],
-          lastAssignment: cl.lastAssignment || [],
-          lastGroupAssignment: cl.lastGroupAssignment || [],
-          lastPickerAssignment: cl.lastPickerAssignment || [],
-          rows: cl.rows || 5,
-          cols: cl.cols || 6
-        };
-      }
-    } catch (e) {
-      console.error(e);
-      state.classes = loadDefaultClasses();
-    }
-  } else {
-    state.classes = loadDefaultClasses();
+  try {
+    state.classes = readStoredRecord(CLASSES_KEY);
+  } catch (error) {
+    console.error(error);
+    showToast('저장한 학급을 불러오지 못했습니다.', 'warning');
   }
-  
-  // 마지막 활성화 학급 검출
-  const lastActiveName = localStorage.getItem('seat_arranger_active_class_name');
-  if (lastActiveName && state.classes[lastActiveName]) {
-    state.activeClass = lastActiveName;
-  } else {
-    state.activeClass = Object.keys(state.classes)[0] || '1학년 1반 예시';
+  try {
+    state.quickRoster = readStoredRecord(QUICK_ROSTER_KEY);
+  } catch (error) {
+    console.error(error);
+    showToast('바로 사용 명단을 불러오지 못했습니다.', 'warning');
   }
-}
-
-function loadDefaultClasses() {
-  const result = {};
-  for (const name in DEFAULT_CLASSES) {
-    const cl = DEFAULT_CLASSES[name];
-    result[name] = {
-      studentsText: cl.studentsText,
-      disabledSeats: new Set(cl.disabledSeats),
-      locks: new Map(cl.locks),
-      separatedPairs: cl.separatedPairs,
-      lastAssignment: cl.lastAssignment,
-      lastGroupAssignment: cl.lastGroupAssignment,
-      lastPickerAssignment: [],
-      rows: cl.rows,
-      cols: cl.cols
-    };
-  }
-  return result;
+  const lastClass = localStorage.getItem(ACTIVE_CLASS_KEY);
+  state.activeClass = lastClass && Object.hasOwn(state.classes, lastClass) ? lastClass : '';
 }
 
 function init() {

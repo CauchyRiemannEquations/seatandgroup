@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seat &amp; Group · 교실 자리 배치</title>
-  <meta name="description" content="학급 명단으로 자리 배치, 조 짜기, 랜덤 뽑기를 진행하세요. 앞자리 희망자는 교탁 앞 한 줄 또는 두 줄에 무작위로 배치할 수 있습니다.">
+  <meta name="description" content="학생 이름만 입력하고 자리 배치, 조 짜기, 랜덤 뽑기를 시작하세요. 자주 쓰는 명단은 학급으로 저장할 수 있습니다. 앞자리 희망자는 교탁 앞 한 줄 또는 두 줄에 무작위로 배치할 수 있습니다.">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="index.css?v=3.0">
+  <link rel="stylesheet" href="index.css?v=3.1">
   <!-- html2canvas CDN for PNG saving -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- jsPDF CDN for PDF saving -->
@@ -50,43 +50,28 @@
     <div class="main-layout">
       <!-- Left Panel: Configuration & Inputs -->
       <aside class="sidebar-panel card" id="class-settings" aria-labelledby="settings-title">
-        <div class="sidebar-heading"><span class="section-mark"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h3m5 0h8M4 12h8m5 0h3M4 18h3m5 0h8"/><circle cx="9.5" cy="6" r="2.5"/><circle cx="14.5" cy="12" r="2.5"/><circle cx="9.5" cy="18" r="2.5"/></svg></span><h2 id="settings-title">학급 설정</h2><a class="mobile-return" href="#workspace">결과로 ↑</a></div>
-        <!-- Class Group Selector Section -->
-        <section class="settings-section">
-          <div class="section-title">
-            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <h3><label for="class-select">사용할 학급</label></h3>
+        <div class="sidebar-heading"><span class="section-mark"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h3m5 0h8M4 12h8m5 0h3M4 18h3m5 0h8"/><circle cx="9.5" cy="6" r="2.5"/><circle cx="14.5" cy="12" r="2.5"/><circle cx="9.5" cy="18" r="2.5"/></svg></span><h2 id="settings-title">명단 설정</h2><a class="mobile-return" href="#workspace">결과 보기 ↓</a></div>
+        <section class="settings-section roster-entry" id="roster-entry" aria-labelledby="roster-label">
+          <div class="roster-actions">
+            <button type="button" class="btn btn-secondary" id="btn-quick-roster" aria-pressed="true">바로 사용</button>
+            <button type="button" class="btn btn-secondary" id="btn-create-class" aria-haspopup="dialog" aria-controls="create-class-dialog">학급 만들기</button>
           </div>
-          <div class="class-manager-wrapper">
-            <div class="select-class-row">
-              <select id="class-select" class="class-select-box" title="현재 학급 명단 그룹 변경">
-                <!-- Dynamically populated in JS -->
-              </select>
-              <button type="button" class="btn btn-secondary btn-icon-only" id="btn-delete-class" title="선택된 학급 삭제">
-                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-              </button>
-            </div>
-
-            <details class="class-save-details">
-              <summary>새 학급으로 저장</summary>
-              <div class="save-class-row">
-              <input type="text" id="new-class-name" placeholder="새 학급 이름" spellcheck="false" title="새 학급 이름">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-save-class">저장</button>
-              </div>
-            </details>
-          </div>
-        </section>
-
-        <!-- Student Input Section -->
-        <section class="settings-section">
           <div class="section-title">
-            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="section-icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <h3><label for="student-list">학생 명단</label></h3>
+            <h3><label id="roster-label" for="student-list">학생 명단</label></h3>
             <span class="student-count-badge"><span id="student-count">0</span>명</span>
           </div>
           <div class="input-container">
-            <textarea id="student-list" placeholder="학생 이름을 입력하세요" spellcheck="false"></textarea>
-            <p class="field-note">이름은 한 줄에 한 명씩, 또는 쉼표로 구분해 주세요.</p>
+            <textarea id="student-list" rows="4" placeholder="학생 이름을 입력하세요" spellcheck="false" aria-describedby="roster-hint"></textarea>
+            <p class="field-note" id="roster-hint">이름을 한 줄에 한 명씩 또는 쉼표로 구분해 주세요.</p>
+          </div>
+          <div id="saved-class-controls" class="saved-class-controls" hidden>
+            <label for="class-select">저장한 학급</label>
+            <div class="select-class-row">
+              <select id="class-select" class="class-select-box"></select>
+              <button type="button" class="btn btn-secondary btn-icon-only" id="btn-delete-class" title="이 학급 삭제" aria-label="이 학급 삭제" hidden>
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -177,7 +162,10 @@
           <div class="workspace-heading">
             <h1>자리 배치</h1>
             <div class="heading-actions">
-              <a class="mobile-settings-link" href="#front-row-settings">앞자리 설정</a>
+              <div class="workspace-jumps">
+                <a class="mobile-settings-link" href="#student-list">명단 입력</a>
+                <a class="mobile-settings-link" href="#front-row-settings">앞자리 설정</a>
+              </div>
               <button type="button" class="btn btn-primary btn-lg" id="btn-shuffle"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3c4.5 0 6.5 12 11 12h4m-4-4 4 4-4 4M3 18h3c1.6 0 3-1.6 4.3-3.8M13.6 9.7C14.7 7.6 15.8 6 17 6h4m-4-4 4 4-4 4"/></svg><span>무작위 배치</span></button>
             </div>
           </div>
@@ -279,7 +267,7 @@
           <div class="workspace-heading">
             <h1>조 짜기</h1>
             <div class="heading-actions">
-              <a class="mobile-settings-link" href="#class-settings">학급 설정</a>
+              <a class="mobile-settings-link" href="#student-list">명단 입력</a>
               <button type="button" class="btn btn-primary btn-lg" id="btn-group-shuffle"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3c4.5 0 6.5 12 11 12h4m-4-4 4 4-4 4M3 18h3c1.6 0 3-1.6 4.3-3.8M13.6 9.7C14.7 7.6 15.8 6 17 6h4m-4-4 4 4-4 4"/></svg><span>조 짜기 시작</span></button>
             </div>
           </div>
@@ -329,7 +317,7 @@
           <div class="workspace-heading">
             <h1>랜덤 뽑기</h1>
             <div class="heading-actions">
-              <a class="mobile-settings-link" href="#class-settings">학급 설정</a>
+              <a class="mobile-settings-link" href="#student-list">명단 입력</a>
               <button type="button" class="btn btn-primary btn-lg" id="btn-picker-start"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 2v2m0 4v2"/></svg><span>추첨 시작</span></button>
             </div>
           </div>
@@ -373,10 +361,30 @@
     </div>
   </div>
 
+  <dialog id="create-class-dialog" class="class-dialog" aria-labelledby="create-class-title">
+    <form id="create-class-form" class="class-form" novalidate>
+      <h2 id="create-class-title">학급 만들기</h2>
+      <div class="class-form-field">
+        <label for="new-class-name">학급 이름</label>
+        <input id="new-class-name" type="text" placeholder="예: 2학년 1반" autocomplete="off" required autofocus aria-describedby="class-form-error">
+      </div>
+      <div class="class-form-field">
+        <label for="new-class-students">학생 명단</label>
+        <textarea id="new-class-students" rows="5" placeholder="학생 이름을 입력하세요" spellcheck="false" aria-describedby="new-class-hint class-form-error" required></textarea>
+        <p id="new-class-hint" class="field-note">이름을 한 줄에 한 명씩 또는 쉼표로 구분해 주세요.</p>
+      </div>
+      <p id="class-form-error" role="alert" hidden></p>
+      <div class="class-form-actions">
+        <button id="btn-cancel-class" type="button" class="btn btn-secondary">취소</button>
+        <button id="btn-save-class" type="submit" class="btn btn-primary">학급 저장</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Custom Alert Toast -->
   <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
   <!-- JavaScript -->
-  <script src="app.js?v=3.0"></script>
+  <script src="app.js?v=3.1"></script>
 </body>
 </html>

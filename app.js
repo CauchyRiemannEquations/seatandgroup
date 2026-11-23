@@ -73,9 +73,11 @@ const DOM = {
   frontRowSettings: document.getElementById('front-row-settings'),
   frontRowInputs: document.querySelectorAll('input[name="front-rows"]'),
   frontStudents: document.getElementById('front-students'),
+  frontStudentAdd: document.getElementById('front-student-add'),
   frontRowStatus: document.getElementById('front-row-status'),
   gridRows: document.getElementById('grid-rows'),
   gridCols: document.getElementById('grid-cols'),
+  gridSteps: document.querySelectorAll('[data-grid-step]'),
   rowsVal: document.getElementById('rows-val'),
   colsVal: document.getElementById('cols-val'),
   preset6x5: document.getElementById('preset-6x5'),
@@ -97,6 +99,7 @@ const DOM = {
   
   // 1) 자리배치 캔버스 영역
   seatsGrid: document.getElementById('seats-grid'),
+  mapDimensions: document.getElementById('map-dimensions'),
   classroomCanvas: document.getElementById('classroom-canvas'),
   btnShuffle: document.getElementById('btn-shuffle'),
   btnSaveStudent: document.getElementById('btn-save-student'),
@@ -295,6 +298,9 @@ function loadClassData(className) {
   const cl = className ? state.classes[className] : state.quickRoster;
   if (!cl) return;
   state.activeClass = className;
+  const classBadge = document.getElementById('workspace-class');
+  classBadge.textContent = className;
+  classBadge.hidden = !className;
 
   // 상태 변수 매핑
   state.rows = cl.rows || 5;
@@ -381,6 +387,9 @@ function parseStudents(shouldSave = true) {
   }
   
   DOM.studentCount.textContent = state.students.length;
+  refreshFrontStudentOptions();
+  document.getElementById('workspace-roster-summary').textContent = names.length
+    ? `학생 ${names.length}명` : '학생 명단을 입력해 주세요.';
   
   // 랜덤 뽑기 슬라이더 동적 최댓값 한계 조절
   const studentCount = state.students.length;
@@ -462,6 +471,7 @@ function getSeatingPlan(activeSeats) {
 
 // 6. 상태 배지 업데이트
 function updateStatusIndicators() {
+  updateRoomControls();
   const totalSeats = state.rows * state.cols;
   const activeCount = totalSeats - state.disabledSeats.size;
   const plan = getSeatingPlan(getActiveSeatIndices());
@@ -494,10 +504,30 @@ function updateStatusIndicators() {
   }
 }
 
+function refreshFrontStudentOptions() {
+  const select = DOM.frontStudentAdd;
+  const selected = new Set(splitStudentNames(state.frontStudentsText));
+  select.replaceChildren(new Option('명단에서 추가', ''));
+  for (const { name, label, disabled } of publicStudentChoices()) {
+    const option = new Option(label, name);
+    option.disabled = disabled || selected.has(name);
+    select.add(option);
+  }
+  select.hidden = state.students.length === 0;
+}
+
+DOM.frontStudentAdd.addEventListener('change', () => {
+  if (!DOM.frontStudentAdd.value) return;
+  const names = splitStudentNames(DOM.frontStudents.value);
+  DOM.frontStudents.value = [...names, DOM.frontStudentAdd.value].join(', ');
+  updateFrontPreferences();
+});
+
 function updateFrontPreferences() {
   state.frontStudentsText = DOM.frontStudents.value;
   const selected = [...DOM.frontRowInputs].find(input => input.checked);
   state.frontRows = Number(selected.value);
+  refreshFrontStudentOptions();
   buildGrid();
   saveClassesToStorage();
 }
@@ -539,8 +569,10 @@ function buildGrid() {
 
   const totalSeats = state.rows * state.cols;
   const publicNames = new Set(state.publicLocks.values());
-  const showSecret = state.isSecretUnlocked && !document.body.classList.contains('html2canvas-capturing');
-  const showFrontZone = splitStudentNames(state.frontStudentsText).length > 0;
+  const capturing = document.body.classList.contains('html2canvas-capturing');
+  const showSecret = state.isSecretUnlocked && !capturing;
+  const frontNames = new Set(splitStudentNames(state.frontStudentsText));
+  DOM.mapDimensions.textContent = `(${state.rows}행 × ${state.cols}열)`;
 
   // 표시 순서 계산: 교탁 시점 모드에서는 교탁에서 학생들을 바라본 모습이 되도록
   // 행(줄)과 열을 모두 뒤집어 180도 회전된 배치로 그림
@@ -572,36 +604,39 @@ function buildGrid() {
 
     let label = '통로';
     if (!isAisle) {
-      if (showFrontZone && i < state.frontRows * state.cols) seat.classList.add('front-zone');
+      if (frontNames.size && i < state.frontRows * state.cols) seat.classList.add('front-zone');
       const indexLabel = document.createElement('span');
       indexLabel.className = 'seat-index';
-      indexLabel.textContent = `${row}줄 ${col}번`;
+      indexLabel.textContent = `${row}-${col}`;
       seat.appendChild(indexLabel);
 
       const lockedName = state.locks.get(i);
       if (lockedName && !state.students.includes(lockedName)) state.locks.delete(i);
       const publicName = state.publicLocks.get(i);
-      if (publicName) {
-        seat.classList.add('public-fixed');
-        const mark = document.createElement('span');
-        mark.className = 'public-seat-badge';
-        mark.textContent = '지정석';
-        indexLabel.append(' ', mark);
-      }
-      const showPin = showSecret && !publicName && state.locks.has(i) && !publicNames.has(lockedName);
       const assignedName = state.assignment[i];
+      const showPin = showSecret && !publicName && state.locks.has(i) && !publicNames.has(lockedName);
       const isEmpty = assignedName === '빈자리' || assignedName === 'X';
       const hasName = assignedName && state.students.includes(assignedName);
-      label = publicName || (showPin ? lockedName : hasName ? assignedName : isEmpty ? '빈자리' : '좌석');
-      seat.classList.toggle('assigned', Boolean(publicName || showPin || hasName || isEmpty));
-      seat.classList.toggle('empty-seat', Boolean(!publicName && !showPin && isEmpty));
+      const occupant = publicName || (showPin ? lockedName : hasName ? assignedName : '');
+      const hasPreference = !capturing && frontNames.has(occupant);
+      label = occupant || (isEmpty ? '빈자리' : '좌석');
+      seat.classList.toggle('assigned', Boolean(occupant || isEmpty));
+      seat.classList.toggle('empty-seat', !occupant && isEmpty);
+      seat.classList.toggle('public-fixed', Boolean(publicName));
+      seat.classList.toggle('front-preferred', hasPreference);
+      if (publicName || hasPreference) {
+        const mark = document.createElement('span');
+        mark.className = publicName ? 'public-seat-badge' : 'front-seat-badge';
+        mark.textContent = publicName ? '지정석' : '희망';
+        indexLabel.append(' ', mark);
+      }
       if (showPin) seat.insertAdjacentHTML('beforeend', getPinSVG());
     }
     const nameLabel = document.createElement('span');
     nameLabel.className = 'student-name';
     nameLabel.textContent = label;
     seat.appendChild(nameLabel);
-    const suffix = !isAisle && state.publicLocks.has(i) ? ', 지정석' : '';
+    const suffix = seat.classList.contains('public-fixed') ? ', 지정석' : seat.classList.contains('front-preferred') ? ', 앞자리 희망' : '';
     seat.setAttribute('aria-label', `${row}줄 ${col}번, ${label}${suffix}`);
     seat.addEventListener('click', event => onSeatClick(event, i));
     seat.addEventListener('dblclick', event => {
@@ -909,7 +944,7 @@ function handleSeatClick(seatIndex) {
     
     const infoSpan = document.createElement('span');
     infoSpan.className = 'seat-index';
-    infoSpan.textContent = `${row}열-${col}행 설정`;
+    infoSpan.textContent = `${row}-${col} 설정`;
     
     seatCard.appendChild(infoSpan);
     seatCard.appendChild(select);
@@ -974,34 +1009,41 @@ function updateGridDimensions(rows, cols) {
 }
 
 // 8. 프리셋 바인딩
-function applyRectangularPreset(rows, cols) {
-  state.disabledSeats.clear();
-  updateGridDimensions(rows, cols);
+const roomPresets = [
+  { button: DOM.preset6x5, rows: 5, cols: 6, aisles: [] },
+  { button: DOM.preset5x6, rows: 6, cols: 5, aisles: [] },
+  {
+    button: DOM.presetPairs, rows: 5, cols: 8,
+    aisles: Array.from({ length: 5 }, (_, row) => [row * 8 + 2, row * 8 + 5]).flat(),
+    message: '3분단 짝꿍 배치를 적용했습니다.'
+  },
+  {
+    button: DOM.presetUShape, rows: 5, cols: 6,
+    aisles: [7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22],
+    message: '디귿(U)자 배치를 적용했습니다.'
+  }
+];
+
+for (const preset of roomPresets) {
+  preset.button.addEventListener('click', () => {
+    state.disabledSeats = new Set(preset.aisles);
+    updateGridDimensions(preset.rows, preset.cols);
+    if (preset.message) showToast(preset.message);
+  });
 }
 
-DOM.preset6x5.addEventListener('click', () => applyRectangularPreset(5, 6));
-DOM.preset5x6.addEventListener('click', () => applyRectangularPreset(6, 5));
-
-DOM.presetPairs.addEventListener('click', () => {
-  state.disabledSeats.clear();
-  for (let r = 0; r < 5; r++) {
-    state.disabledSeats.add(r * 8 + 2); // 3열 통로
-    state.disabledSeats.add(r * 8 + 5); // 6열 통로
+function updateRoomControls() {
+  for (const preset of roomPresets) {
+    const matches = state.rows === preset.rows && state.cols === preset.cols &&
+      state.disabledSeats.size === preset.aisles.length && preset.aisles.every(index => state.disabledSeats.has(index));
+    preset.button.setAttribute('aria-pressed', String(matches));
   }
-  updateGridDimensions(5, 8);
-  showToast("3분단 짝꿍 배치가 완성되었습니다.");
-});
-
-DOM.presetUShape.addEventListener('click', () => {
-  state.disabledSeats.clear();
-  for (let r = 1; r < 4; r++) {
-    for (let c = 1; c < 5; c++) {
-      state.disabledSeats.add(r * 6 + c);
-    }
+  for (const button of DOM.gridSteps) {
+    const input = document.getElementById(button.getAttribute('aria-controls'));
+    const next = input.valueAsNumber + Number(button.dataset.gridStep);
+    button.disabled = state.isShuffling || next < Number(input.min) || next > Number(input.max);
   }
-  updateGridDimensions(5, 6);
-  showToast("디귿자(U자)형 배치가 로드되었습니다.");
-});
+}
 
 DOM.btnResetLayout.addEventListener('click', () => {
   state.disabledSeats.clear();
@@ -1027,9 +1069,25 @@ if (DOM.btnFlipView) {
   });
 }
 
-DOM.gridRows.addEventListener('input', e => updateGridDimensions(parseInt(e.target.value), state.cols));
-DOM.gridCols.addEventListener('input', e => updateGridDimensions(state.rows, parseInt(e.target.value)));
+for (const input of [DOM.gridRows, DOM.gridCols]) {
+  const isRows = input === DOM.gridRows;
+  input.addEventListener('input', () => {
+    const value = input.valueAsNumber;
+    if (!input.validity.valid || !Number.isInteger(value) || state.isShuffling) return;
+    if (value !== (isRows ? state.rows : state.cols)) {
+      updateGridDimensions(isRows ? value : state.rows, isRows ? state.cols : value);
+    }
+  });
+  input.addEventListener('change', () => { input.value = isRows ? state.rows : state.cols; });
+}
 
+for (const button of DOM.gridSteps) {
+  button.addEventListener('click', () => {
+    const input = document.getElementById(button.getAttribute('aria-controls'));
+    input.stepUp(Number(button.dataset.gridStep));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
 
 // ============================================================================
 // 9. 대형 통합 탭 내비게이션 시스템
@@ -1044,42 +1102,25 @@ function switchMainTab(tabName) {
   closeInlineSeatPicker();
   cancelPendingSeatClick();
   state.activeTab = tabName;
+  const activeTab = document.getElementById(`tab-btn-${tabName}`);
+  const heading = document.getElementById('workspace-heading');
+  heading.dataset.tool = tabName;
+  heading.querySelector('h1').textContent = activeTab.textContent.trim();
+  heading.querySelector('.workspace-symbol').replaceChildren(activeTab.querySelector('svg').cloneNode(true));
+  for (const control of heading.querySelectorAll('[data-action-tool]')) {
+    control.hidden = control.dataset.actionTool !== tabName;
+  }
   for (const name of ['seating', 'groups', 'picker']) {
-    document.getElementById(`tab-btn-${name}`).setAttribute('aria-pressed', String(name === tabName));
+    const selected = name === tabName;
+    const tab = document.getElementById(`tab-btn-${name}`);
+    tab.setAttribute('aria-pressed', String(selected));
+    tab.classList.toggle('active', selected);
+    document.getElementById(`view-${name}`).classList.toggle('active', selected);
   }
-  DOM.frontRowSettings.style.display = tabName === 'seating' ? '' : 'none';
-  
-  // 모든 탭 버튼 비활성화
-  DOM.tabBtnSeating.classList.remove('active');
-  DOM.tabBtnGroups.classList.remove('active');
-  DOM.tabBtnPicker.classList.remove('active');
-  
-  // 모든 탭 뷰 감추기
-  DOM.viewSeating.classList.remove('active');
-  DOM.viewGroups.classList.remove('active');
-  DOM.viewPicker.classList.remove('active');
-  DOM.viewSeating.style.display = 'none';
-  DOM.viewGroups.style.display = 'none';
-  DOM.viewPicker.style.display = 'none';
-  
-  if (tabName === 'seating') {
-    DOM.tabBtnSeating.classList.add('active');
-    DOM.viewSeating.classList.add('active');
-    DOM.viewSeating.style.display = 'flex';
-    DOM.sidebarLayoutSettings.style.display = 'flex'; // 자리 설정 노출
-  } else if (tabName === 'groups') {
-    DOM.tabBtnGroups.classList.add('active');
-    DOM.viewGroups.classList.add('active');
-    DOM.viewGroups.style.display = 'flex';
-    DOM.sidebarLayoutSettings.style.display = 'none'; // 자리 설정 숨김
-    renderGroupsList();
-  } else if (tabName === 'picker') {
-    DOM.tabBtnPicker.classList.add('active');
-    DOM.viewPicker.classList.add('active');
-    DOM.viewPicker.style.display = 'flex';
-    DOM.sidebarLayoutSettings.style.display = 'none'; // 자리 설정 숨김
-    renderPickerList();
-  }
+  DOM.frontRowSettings.hidden = tabName !== 'seating';
+  DOM.sidebarLayoutSettings.hidden = tabName !== 'seating';
+  if (tabName === 'groups') renderGroupsList();
+  if (tabName === 'picker') renderPickerList();
 }
 
 
@@ -2031,7 +2072,35 @@ function initClasses() {
   state.activeClass = lastClass && Object.hasOwn(state.classes, lastClass) ? lastClass : '';
 }
 
+// 작은 화면에서도 데스크톱과 같은 입력 요소를 사용해 명단과 배치 조건을 유지한다.
+function initSettingsDrawer() {
+  const settings = document.getElementById('class-settings');
+  const workspace = document.getElementById('workspace');
+  const drawer = document.getElementById('settings-drawer');
+  const opener = document.getElementById('btn-open-settings');
+  const compact = window.matchMedia('(max-width: 1023px)');
+  opener.addEventListener('click', () => {
+    if (!compact.matches || drawer.open) return;
+    drawer.append(settings);
+    drawer.showModal();
+  });
+  document.getElementById('btn-close-settings').addEventListener('click', () => drawer.close());
+  drawer.addEventListener('click', event => {
+    if (event.target !== drawer) return;
+    const bounds = drawer.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right ||
+        event.clientY < bounds.top || event.clientY > bounds.bottom) drawer.close();
+  });
+  drawer.addEventListener('close', () => {
+    if (!drawer.open) workspace.before(settings);
+  });
+  compact.addEventListener('change', () => {
+    if (!compact.matches && drawer.open) drawer.close();
+  });
+}
+
 function init() {
+  initSettingsDrawer();
   initTheme();
   initClasses();
   

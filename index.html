@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="index.css?v=3.2">
+  <link rel="stylesheet" href="index.css?v=3.3">
   <!-- html2canvas CDN for PNG saving -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- jsPDF CDN for PDF saving -->
@@ -122,7 +122,7 @@
           </div>
 
           <div class="layout-hint">
-            <span>지정되지 않은 좌석을 한 번 누르면 통로로, 다시 누르면 좌석으로 바뀝니다. 두 번 누르면 학생을 지정할 수 있습니다.</span>
+            <span>지정되지 않은 좌석을 한 번 누르면 통로로, 다시 누르면 좌석으로 바뀝니다. 두 번 누르고 목록에서 이름을 고르면 그 자리에 바로 지정됩니다.</span>
           </div>
         </section>
 
@@ -385,12 +385,12 @@
         <h3>자리 배치</h3>
         <p><strong>교실 구조</strong>에서 줄·열이나 배치 유형을 정하고, 필요한 좌석을 지정한 뒤 <strong>무작위 배치</strong>를 누르세요.</p>
         <dl class="seat-guide">
-          <div><dt>좌석 지정</dt><dd>책상을 두 번 누르거나 <strong>좌석 지정</strong> 버튼에서 자리와 학생을 고르세요. 지정석은 다시 배치해도 유지됩니다. 지정석을 누르면 학생을 바꾸거나 <strong>지정 해제</strong>할 수 있습니다.</dd></div>
+          <div><dt>좌석 지정</dt><dd>책상을 두 번 누르면 이름 목록이 열립니다. 이름을 고르는 즉시 지정되고, 다시 배치해도 그 자리에 앉습니다. 지정석은 한 번 눌러 학생을 바꾸거나 <strong>지정 해제</strong>할 수 있습니다. 배치도 위 <strong>좌석 지정</strong> 버튼으로도 자리와 학생을 고를 수 있습니다.</dd></div>
           <div><dt>통로</dt><dd>지정되지 않은 책상을 한 번 누르면 통로가 됩니다. 통로를 다시 누르면 책상으로 돌아옵니다.</dd></div>
           <div><dt>앞자리</dt><dd><strong>앞자리 희망자</strong>에서 교탁 기준 앞 1줄 또는 2줄을 고르고 이름을 입력하면, 그 범위 안에서 자리를 뽑습니다.</dd></div>
           <div><dt>결과 저장</dt><dd><strong>교탁 시점</strong>으로 배치도를 돌려 볼 수 있습니다. 배치 후 학생용 또는 교사용을 골라 PDF나 PNG로 저장하세요.</dd></div>
         </dl>
-        <p class="guide-keys">키보드로 책상을 선택하고 <kbd>Enter</kbd>를 눌러 좌석을 지정하세요. 지정되지 않은 자리에서는 <kbd>Space</kbd>로 좌석과 통로를 바꿀 수 있습니다.</p>
+        <p class="guide-keys">책상에서 <kbd>Enter</kbd>를 누르면 학생 목록이 열립니다. 방향키로 이름을 고른 뒤 <kbd>Enter</kbd>로 지정하거나 <kbd>Esc</kbd>로 닫으세요. 지정되지 않은 자리에서는 <kbd>Space</kbd>로 좌석과 통로를 바꿀 수 있습니다.</p>
       </section>
       <section class="help-section help-groups">
         <h3>조 짜기</h3>
@@ -450,6 +450,6 @@
   <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
   <!-- JavaScript -->
-  <script src="app.js?v=3.2"></script>
+  <script src="app.js?v=3.3"></script>
 </body>
 </html>

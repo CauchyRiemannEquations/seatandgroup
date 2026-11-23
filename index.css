@@ -540,6 +540,48 @@ input[type='range'] { width: 100%; height: 16px; margin: 0; accent-color: var(--
 .seat-card.assigned.front-zone { border-color: var(--amber-edge); }
 .seat-card.public-fixed { border-color: var(--roster-edge); box-shadow: inset 0 2px var(--roster-edge); }
 .public-fixed .seat-index { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 4px; }
+/* The desk opens a nonmodal roster at its edge. Fixed positioning keeps the
+   options visible beyond the classroom's horizontally scrollable canvas. */
+.seat-card[aria-expanded='true'] { outline: 2px solid var(--roster-ink); outline-offset: 2px; }
+#inline-seat-picker {
+  position: fixed;
+  z-index: 20;
+  width: min(164px, calc(100vw - 12px));
+  max-height: 248px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  border: 1px solid var(--roster-edge);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 4px 16px #11271e26;
+}
+#inline-seat-picker button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 35px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+#inline-seat-picker button:hover:enabled,
+#inline-seat-picker button:focus-visible { background: var(--subtle); outline: 1px solid var(--roster-edge); outline-offset: -1px; }
+#inline-seat-picker [aria-selected='true'] { background: var(--roster-fill); color: var(--roster-ink); font-weight: 700; }
+#inline-seat-picker [aria-selected='true']::after { content: '✓'; }
+#inline-seat-picker button:disabled { color: var(--text-muted); cursor: default; }
+#inline-seat-picker .release-seat { margin-top: 3px; border-top: 1px solid var(--line); border-radius: 0; color: var(--danger); }
+@media (pointer: coarse) {
+  #inline-seat-picker button { min-height: 44px; }
+}
 .public-seat-badge { background: var(--roster-fill); color: var(--roster-ink); padding: 0 4px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .map-legend { display: flex; gap: 15px; flex-wrap: wrap; padding: 11px 2px 15px; }
 .map-legend span { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: var(--text-muted); }

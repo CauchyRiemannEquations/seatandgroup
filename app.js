@@ -538,6 +538,7 @@ function applyFlippedLayout() {
 }
 
 function buildGrid() {
+  closeInlineSeatPicker();
   cancelPendingSeatClick();
   const container = DOM.seatsGrid;
   DOM.classroomCanvas.style.setProperty('--seat-columns', state.cols);
@@ -572,6 +573,10 @@ function buildGrid() {
     seat.classList.add(isAisle ? 'disabled' : 'active');
     seat.setAttribute('role', 'button');
     seat.tabIndex = 0;
+    if (!state.isSecretUnlocked) {
+      seat.setAttribute('aria-haspopup', 'listbox');
+      seat.setAttribute('aria-expanded', 'false');
+    }
 
     let label = '통로';
     if (!isAisle) {
@@ -610,16 +615,16 @@ function buildGrid() {
     seat.addEventListener('dblclick', event => {
       if (state.isSecretUnlocked || state.isShuffling || DOM.publicSeatDialog.open) return;
       event.preventDefault();
-      openPublicSeatDialog(i);
+      openInlineSeatPicker(i);
     });
     seat.addEventListener('keydown', event => {
       if (state.isShuffling || event.target !== seat || !['Enter', ' '].includes(event.key)) return;
       event.preventDefault();
       if (!state.isSecretUnlocked && event.key === 'Enter') {
-        openPublicSeatDialog(i);
+        openInlineSeatPicker(i);
       } else {
         handleSeatClick(i);
-        if (!state.isSecretUnlocked && !DOM.publicSeatDialog.open) container.querySelector(`[data-index="${i}"]`)?.focus();
+        if (!state.isSecretUnlocked && !inlineSeatPicker) container.querySelector(`[data-index="${i}"]`)?.focus();
       }
     });
     container.appendChild(seat);
@@ -642,7 +647,7 @@ function getPinSVG() {
 
 // 두 번째 클릭이 도착하기 전에 좌석 DOM을 다시 만들면 브라우저의 더블클릭 대상이 사라진다.
 let pendingSeatClick = null;
-let returnToSeat = false;
+let inlineSeatPicker = null;
 
 function cancelPendingSeatClick() {
   if (pendingSeatClick) clearTimeout(pendingSeatClick.timer);
@@ -663,7 +668,7 @@ function onSeatClick(event, index) {
     return;
   }
   if (event.detail > 1 || pendingSeatClick?.index === index) {
-    openPublicSeatDialog(index);
+    openInlineSeatPicker(index);
     return;
   }
   // 서로 다른 좌석을 빠르게 눌러도 첫 번째 통로 변경을 잃지 않는다.
@@ -672,8 +677,126 @@ function onSeatClick(event, index) {
 }
 
 document.addEventListener('pointerdown', event => {
+  if (inlineSeatPicker && !inlineSeatPicker.list.contains(event.target) && !inlineSeatPicker.seat.contains(event.target)) {
+    closeInlineSeatPicker();
+  }
   if (pendingSeatClick && !event.target.closest('.seat-card')) flushPendingSeatClick();
 });
+
+function publicStudentChoices() {
+  return [...new Set(state.students)].map(name => {
+    const disabled = state.students.indexOf(name) !== state.students.lastIndexOf(name);
+    return { name, disabled, label: disabled ? `${name} (동명이인)` : name };
+  });
+}
+
+function closeInlineSeatPicker() {
+  if (!inlineSeatPicker) return;
+  const { list, seat } = inlineSeatPicker;
+  inlineSeatPicker = null;
+  seat.setAttribute('aria-expanded', 'false');
+  seat.removeAttribute('aria-controls');
+  list.remove();
+}
+
+function positionInlineSeatPicker() {
+  if (!inlineSeatPicker) return;
+  const { seat, list } = inlineSeatPicker;
+  const rect = seat.getBoundingClientRect();
+  const viewport = seat.closest('.classroom-viewport').getBoundingClientRect();
+  const margin = 6;
+  const left = Math.max(0, rect.left, viewport.left);
+  const right = Math.min(window.innerWidth, rect.right, viewport.right);
+  if (right <= left || rect.bottom <= 0 || rect.top >= window.innerHeight) {
+    closeInlineSeatPicker();
+    return;
+  }
+  const below = window.innerHeight - rect.bottom - 2 * margin;
+  const above = rect.top - 2 * margin;
+  const desiredHeight = Math.min(248, list.scrollHeight + 2);
+  const opensUp = below < desiredHeight && above > below;
+  list.style.maxHeight = Math.max(0, Math.min(248, opensUp ? above : below)) + 'px';
+  list.style.left = Math.max(margin, Math.min(left, window.innerWidth - list.offsetWidth - margin)) + 'px';
+  list.style.top = (opensUp ? rect.top - margin - list.offsetHeight : rect.bottom + margin) + 'px';
+}
+
+function openInlineSeatPicker(index) {
+  if (state.isShuffling || state.isSecretUnlocked || DOM.publicSeatDialog.open) return;
+  cancelPendingSeatClick();
+  const seat = DOM.seatsGrid.querySelector(`[data-index="${index}"]`);
+  if (!seat || inlineSeatPicker?.seat === seat) return;
+  closeInlineSeatPicker();
+  const choices = publicStudentChoices();
+  if (!choices.length || choices.every(choice => choice.disabled)) {
+    showToast(choices.length ? '동명이인은 명단에 번호를 붙여 구분해 주세요.' : '먼저 학생 명단을 입력해 주세요.', 'warning');
+    return;
+  }
+
+  const current = state.publicLocks.get(index);
+  if (current) choices.push({ name: '', label: '지정 해제', disabled: false });
+  const list = document.createElement('div');
+  list.id = 'inline-seat-picker';
+  list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-label', `${Math.floor(index / state.cols) + 1}줄 ${index % state.cols + 1}번 학생 선택`);
+  for (const { name, label, disabled } of choices) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.tabIndex = -1;
+    option.disabled = disabled;
+    option.value = name;
+    option.textContent = label;
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', String(name === current));
+    if (!name) option.className = 'release-seat';
+    list.appendChild(option);
+  }
+
+  list.addEventListener('click', event => {
+    const option = event.target.closest('[role="option"]');
+    if (!option || option.disabled) return;
+    closeInlineSeatPicker();
+    savePublicSeat(index, option.value);
+    DOM.seatsGrid.querySelector(`[data-index="${index}"]`)?.focus({ preventScroll: true });
+  });
+  list.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeInlineSeatPicker();
+      seat.focus({ preventScroll: true });
+      return;
+    }
+    const options = [...list.querySelectorAll('button:enabled')];
+    const active = options.indexOf(document.activeElement);
+    let next;
+    switch (event.key) {
+      case 'ArrowDown': next = (active + 1) % options.length; break;
+      case 'ArrowUp': next = (active - 1 + options.length) % options.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = options.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    options[next].focus();
+  });
+  list.addEventListener('focusout', event => {
+    if (!list.contains(event.relatedTarget)) closeInlineSeatPicker();
+  });
+
+  // Keep the list next to its desk in keyboard order and out of the grid layout.
+  seat.after(list);
+  inlineSeatPicker = { seat, list };
+  seat.setAttribute('aria-expanded', 'true');
+  seat.setAttribute('aria-controls', list.id);
+  positionInlineSeatPicker();
+  const initial = list.querySelector('[aria-selected="true"]') || list.querySelector('button:enabled');
+  initial.focus({ preventScroll: true });
+  list.scrollTop = Math.max(0, initial.offsetTop - list.clientHeight / 2);
+}
+
+window.addEventListener('resize', positionInlineSeatPicker);
+document.addEventListener('scroll', event => {
+  if (inlineSeatPicker && !inlineSeatPicker.list.contains(event.target)) positionInlineSeatPicker();
+}, true);
 
 function updatePublicSeatForm() {
   const index = Number(DOM.publicSeatPosition.value);
@@ -700,11 +823,11 @@ function updatePublicSeatHint() {
   DOM.publicSeatHint.textContent = notes.join(' ');
 }
 
-function openPublicSeatDialog(index) {
+function openPublicSeatDialog() {
   if (state.isShuffling || DOM.publicSeatDialog.open) return;
   cancelPendingSeatClick();
-  returnToSeat = Number.isInteger(index);
-  const selectedIndex = returnToSeat ? index : (getActiveSeatIndices()[0] ?? 0);
+  closeInlineSeatPicker();
+  const selectedIndex = getActiveSeatIndices()[0] ?? 0;
   DOM.publicSeatPosition.replaceChildren();
   for (let i = 0; i < state.rows * state.cols; i++) {
     const location = `${Math.floor(i / state.cols) + 1}줄 ${i % state.cols + 1}번`;
@@ -714,23 +837,18 @@ function openPublicSeatDialog(index) {
   }
   DOM.publicSeatPosition.value = String(selectedIndex);
   DOM.publicSeatStudent.replaceChildren(new Option('학생 선택', ''));
-  for (const student of new Set(state.students)) {
-    const ambiguous = state.students.indexOf(student) !== state.students.lastIndexOf(student);
-    const option = new Option(ambiguous ? `${student} (동명이인)` : student, student);
-    option.disabled = ambiguous;
+  for (const { name, label, disabled } of publicStudentChoices()) {
+    const option = new Option(label, name);
+    option.disabled = disabled;
     DOM.publicSeatStudent.add(option);
   }
   updatePublicSeatForm();
   DOM.publicSeatDialog.showModal();
-  (returnToSeat ? DOM.publicSeatStudent : DOM.publicSeatPosition).focus();
+  DOM.publicSeatPosition.focus();
 }
 
-function savePublicSeat(name) {
-  const index = Number(DOM.publicSeatPosition.value);
-  if (name && state.publicLocks.get(index) === name) {
-    DOM.publicSeatDialog.close();
-    return;
-  }
+function savePublicSeat(index, name) {
+  if (state.publicLocks.get(index) === name) return;
   if (name) {
     if (!state.students.includes(name) || state.students.indexOf(name) !== state.students.lastIndexOf(name)) return;
     for (const [oldIndex, student] of state.publicLocks) {
@@ -742,10 +860,8 @@ function savePublicSeat(name) {
     state.publicLocks.delete(index);
   }
   state.assignment = [];
-  DOM.publicSeatDialog.close();
   buildGrid();
   saveClassesToStorage();
-  if (returnToSeat) DOM.seatsGrid.querySelector(`[data-index="${index}"]`)?.focus();
   showToast(name ? `${name} 학생의 좌석을 지정했습니다.` : '좌석 지정을 해제했습니다.');
 }
 
@@ -754,9 +870,14 @@ DOM.publicSeatPosition.addEventListener('change', updatePublicSeatForm);
 DOM.publicSeatStudent.addEventListener('change', updatePublicSeatHint);
 DOM.publicSeatForm.addEventListener('submit', event => {
   event.preventDefault();
-  if (DOM.publicSeatStudent.value) savePublicSeat(DOM.publicSeatStudent.value);
+  if (!DOM.publicSeatStudent.value) return;
+  DOM.publicSeatDialog.close();
+  savePublicSeat(Number(DOM.publicSeatPosition.value), DOM.publicSeatStudent.value);
 });
-DOM.publicSeatClear.addEventListener('click', () => savePublicSeat(''));
+DOM.publicSeatClear.addEventListener('click', () => {
+  DOM.publicSeatDialog.close();
+  savePublicSeat(Number(DOM.publicSeatPosition.value), '');
+});
 document.getElementById('btn-public-seat-cancel').addEventListener('click', () => DOM.publicSeatDialog.close());
 
 // 좌석 클릭 처리
@@ -870,9 +991,9 @@ function handleSeatClick(seatIndex) {
     return;
   }
   
-  // 공개 지정석은 한 번 눌러도 통로가 되지 않도록 편집창으로 연결한다.
+  // 이미 지정한 책상은 한 번 눌러 학생을 바꾸거나 지정을 해제할 수 있다.
   if (state.publicLocks.has(seatIndex)) {
-    openPublicSeatDialog(seatIndex);
+    openInlineSeatPicker(seatIndex);
     return;
   }
   if (state.disabledSeats.has(seatIndex)) {
@@ -992,6 +1113,7 @@ DOM.tabBtnPicker.addEventListener('click', () => switchMainTab('picker'));
 function switchMainTab(tabName) {
   if (state.isShuffling) return; // 작업 중 차단
   
+  closeInlineSeatPicker();
   cancelPendingSeatClick();
   state.activeTab = tabName;
   for (const name of ['seating', 'groups', 'picker']) {
@@ -1039,6 +1161,7 @@ function switchMainTab(tabName) {
 
 // 추첨이 끝날 때까지 학급, 명단, 인원수와 배치 조건을 같은 상태로 유지한다.
 function lockShuffleControls() {
+  closeInlineSeatPicker();
   state.isShuffling = true;
   const controls = document.querySelectorAll(
     '.sidebar-panel :is(button, input, select, textarea):enabled, .main-tab-btn:enabled, ' +

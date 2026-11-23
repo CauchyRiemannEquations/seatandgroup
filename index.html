@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="index.css?v=3.3">
+  <link rel="stylesheet" href="index.css?v=3.4">
   <!-- html2canvas CDN for PNG saving -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- jsPDF CDN for PDF saving -->
@@ -179,10 +179,6 @@
             <h2><span class="sheet-icon"><svg aria-hidden="true" class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V4h4m10 0h4v3M3 17v3h4m10 0h4v-3"/><rect x="7" y="8" width="3" height="2" rx=".5"/><rect x="14" y="8" width="3" height="2" rx=".5"/><rect x="7" y="14" width="3" height="2" rx=".5"/><rect x="14" y="14" width="3" height="2" rx=".5"/></svg></span>교실 배치도</h2>
 
             <div class="utility-actions">
-              <button type="button" class="btn btn-icon seat-assign-action" id="btn-seat-assign" aria-haspopup="dialog" aria-controls="public-seat-dialog">
-                <svg class="btn-svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="9" rx="2"/><path d="M5 13v5m9-5v2m-8 3h5m5 1 2 2 4-5"/></svg>
-                좌석 지정
-              </button>
               <button type="button" class="btn btn-icon" id="btn-flip-view" title="교탁 시점 보기 (같은 배치를 교탁에서 학생들을 바라본 모습으로 180도 회전)">
                 <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
                 <span>교탁 시점</span>
@@ -385,7 +381,7 @@
         <h3>자리 배치</h3>
         <p><strong>교실 구조</strong>에서 줄·열이나 배치 유형을 정하고, 필요한 좌석을 지정한 뒤 <strong>무작위 배치</strong>를 누르세요.</p>
         <dl class="seat-guide">
-          <div><dt>좌석 지정</dt><dd>책상을 두 번 누르면 이름 목록이 열립니다. 이름을 고르는 즉시 지정되고, 다시 배치해도 그 자리에 앉습니다. 지정석은 한 번 눌러 학생을 바꾸거나 <strong>지정 해제</strong>할 수 있습니다. 배치도 위 <strong>좌석 지정</strong> 버튼으로도 자리와 학생을 고를 수 있습니다.</dd></div>
+          <div><dt>좌석 지정</dt><dd>책상을 두 번 누르면 이름 목록이 열립니다. 이름을 고르는 즉시 지정되고, 다시 배치해도 그 자리에 앉습니다. 지정석은 한 번 눌러 학생을 바꾸거나 <strong>지정 해제</strong>할 수 있습니다.</dd></div>
           <div><dt>통로</dt><dd>지정되지 않은 책상을 한 번 누르면 통로가 됩니다. 통로를 다시 누르면 책상으로 돌아옵니다.</dd></div>
           <div><dt>앞자리</dt><dd><strong>앞자리 희망자</strong>에서 교탁 기준 앞 1줄 또는 2줄을 고르고 이름을 입력하면, 그 범위 안에서 자리를 뽑습니다.</dd></div>
           <div><dt>결과 저장</dt><dd><strong>교탁 시점</strong>으로 배치도를 돌려 볼 수 있습니다. 배치 후 학생용 또는 교사용을 골라 PDF나 PNG로 저장하세요.</dd></div>
@@ -401,29 +397,6 @@
         <p>뽑을 인원수를 정하고 <strong>추첨 시작</strong>을 누르세요. 뽑힌 학생의 명단은 <strong>결과 텍스트 복사</strong>로 가져올 수 있습니다.</p>
       </section>
     </div>
-  </dialog>
-
-  <dialog id="public-seat-dialog" class="app-dialog seat-dialog" aria-labelledby="public-seat-title">
-    <form id="public-seat-form" class="class-form">
-      <div class="seat-form-heading">
-        <h2 id="public-seat-title">좌석 지정</h2>
-        <p>무작위 배치 후에도 선택한 학생은 이 자리에 앉습니다.</p>
-      </div>
-      <div class="class-form-field">
-        <label for="public-seat-position">좌석</label>
-        <select id="public-seat-position" class="class-select-box" aria-describedby="public-seat-hint"></select>
-      </div>
-      <div class="class-form-field">
-        <label for="public-seat-student">학생</label>
-        <select id="public-seat-student" class="class-select-box" aria-describedby="public-seat-hint"></select>
-      </div>
-      <p id="public-seat-hint" class="field-note" aria-live="polite"></p>
-      <div class="class-form-actions">
-        <button id="btn-public-seat-clear" type="button" class="btn" hidden>지정 해제</button>
-        <button id="btn-public-seat-cancel" type="button" class="btn">취소</button>
-        <button id="btn-public-seat-save" type="submit" class="btn btn-primary">지정하기</button>
-      </div>
-    </form>
   </dialog>
 
   <dialog id="create-class-dialog" class="app-dialog class-dialog" aria-labelledby="create-class-title">
@@ -450,6 +423,6 @@
   <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
   <!-- JavaScript -->
-  <script src="app.js?v=3.3"></script>
+  <script src="app.js?v=3.4"></script>
 </body>
 </html>

@@ -13,6 +13,8 @@ const state = {
   rows: 5,
   cols: 6,
   students: [],
+  frontRows: 1,
+  frontStudentsText: '',
   disabledSeats: new Set(),
   locks: new Map(), // seatIndex -> studentName
   separatedPairs: [], // [[s1, s2], ...]
@@ -28,7 +30,7 @@ const state = {
   lastPickerAssignment: [],
   
   // 테마 및 탭 상태
-  theme: 'dark', // 'dark' | 'light'
+  theme: 'light', // 'dark' | 'light'
   activeTab: 'seating', // 'seating' | 'groups' | 'picker'
   
   // 교탁 시점 보기 상태 (false: 뒤에서 교탁을 바라본 기본 배치 / true: 교탁에서 학생들을 바라본 180도 회전 배치)
@@ -58,6 +60,10 @@ const DOM = {
   // 학생 명단 및 레이아웃 설정
   studentList: document.getElementById('student-list'),
   studentCount: document.getElementById('student-count'),
+  frontRowSettings: document.getElementById('front-row-settings'),
+  frontRowInputs: document.querySelectorAll('input[name="front-rows"]'),
+  frontStudents: document.getElementById('front-students'),
+  frontRowStatus: document.getElementById('front-row-status'),
   gridRows: document.getElementById('grid-rows'),
   gridCols: document.getElementById('grid-cols'),
   rowsVal: document.getElementById('rows-val'),
@@ -196,7 +202,10 @@ function showToast(message, type = 'success') {
     icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.1rem;height:1.1rem;"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>';
   }
   
-  toast.innerHTML = `${icon}<span>${message}</span>`;
+  toast.innerHTML = icon;
+  const messageText = document.createElement('span');
+  messageText.textContent = message;
+  toast.appendChild(messageText);
   DOM.toastContainer.appendChild(toast);
   
   setTimeout(() => {
@@ -209,8 +218,8 @@ function showToast(message, type = 'success') {
 const DEFAULT_CLASSES = {
   '1학년 1반 예시': {
     studentsText: '강민준\n권도윤\n김도현\n김민재\n김우진\n김준우\n김지호\n박민준\n박서준\n박예준\n서우진\n송민우\n신도윤\n안지후\n양도현\n오재원\n유태양\n윤도현\n이건우\n이도현\n이민우\n이서준\n임지훈\n정민준\n조현우',
-    disabledSeats: [2, 5, 8, 11, 14, 17, 20, 23, 26, 29], // 짝꿍 배치 형태 통로
-    locks: [[6, '강민준'], [12, '조현우']],
+    disabledSeats: [],
+    locks: [],
     separatedPairs: [['김민재', '김우진'], ['이서준', '정민준']],
     lastAssignment: [],
     lastGroupAssignment: [],
@@ -219,13 +228,13 @@ const DEFAULT_CLASSES = {
   },
   '1학년 2반 예시': {
     studentsText: '김가은\n김나은\n김다은\n김민서\n김서아\n김서연\n김서현\n김수아\n김수빈\n김아윤\n김예은\n김지민\n김지아\n김지안\n김지우\n김지유\n김하은\n박서윤\n박소율\n박아린\n박채원\n서아윤\n서윤아\n신지우\n윤서연\n이서윤\n이서현\n이소율',
-    disabledSeats: [7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22], // U자형 형태 통로
+    disabledSeats: [2, 3, 4, 5, 10, 11, 12, 13, 18, 19, 20, 21, 26, 27, 28, 29, 34, 35, 36, 37], // 28석 U자 배치
     locks: [],
     separatedPairs: [['김가은', '김나은']],
     lastAssignment: [],
     lastGroupAssignment: [],
-    rows: 5,
-    cols: 6
+    rows: 6,
+    cols: 8
   }
 };
 
@@ -240,6 +249,8 @@ function saveClassesToStorage() {
     const cl = state.classes[name];
     dataToSave[name] = {
       studentsText: cl.studentsText,
+      frontRows: cl.frontRows,
+      frontStudentsText: cl.frontStudentsText,
       disabledSeats: Array.from(cl.disabledSeats),
       locks: Array.from(cl.locks.entries()),
       separatedPairs: cl.separatedPairs,
@@ -261,6 +272,8 @@ function captureCurrentClassState() {
   
   state.classes[state.activeClass] = {
     studentsText: DOM.studentList.value,
+    frontRows: state.frontRows,
+    frontStudentsText: state.frontStudentsText,
     disabledSeats: new Set(state.disabledSeats),
     locks: new Map(state.locks),
     separatedPairs: [...state.separatedPairs],
@@ -282,6 +295,8 @@ function loadClassData(className) {
   // 상태 변수 매핑
   state.rows = cl.rows || 5;
   state.cols = cl.cols || 6;
+  state.frontRows = cl.frontRows === 2 ? 2 : 1;
+  state.frontStudentsText = cl.frontStudentsText || '';
   state.disabledSeats = new Set(cl.disabledSeats || []);
   state.locks = new Map(cl.locks || []);
   state.separatedPairs = cl.separatedPairs || [];
@@ -291,6 +306,8 @@ function loadClassData(className) {
   
   // UI 바인딩
   DOM.studentList.value = cl.studentsText || '';
+  DOM.frontStudents.value = state.frontStudentsText;
+  DOM.frontRowInputs.forEach(input => { input.checked = Number(input.value) === state.frontRows; });
   DOM.gridRows.value = state.rows;
   DOM.gridCols.value = state.cols;
   DOM.rowsVal.textContent = state.rows;
@@ -324,13 +341,16 @@ function populateClassSelectDropdown() {
   DOM.classSelect.value = state.activeClass;
 }
 
-// 학생 리스트 파싱
-function parseStudents(shouldSave = true) {
-  const text = DOM.studentList.value;
-  state.students = text
+function splitStudentNames(text) {
+  return text
     .split(/[\n,]+/)
     .map(name => name.trim())
     .filter(name => name.length > 0);
+}
+
+// 학생 리스트 파싱
+function parseStudents(shouldSave = true) {
+  state.students = splitStudentNames(DOM.studentList.value);
   
   DOM.studentCount.textContent = state.students.length;
   
@@ -353,12 +373,61 @@ function parseStudents(shouldSave = true) {
   }
 }
 
+function getActiveSeatIndices() {
+  const seats = [];
+  for (let i = 0; i < state.rows * state.cols; i++) {
+    if (!state.disabledSeats.has(i)) seats.push(i);
+  }
+  return seats;
+}
+
+// 앞줄은 화면 방향과 관계없이 교탁에 가까운 물리적인 행으로 센다.
+function getSeatingPlan(activeSeats) {
+  const frontNames = new Set(splitStudentNames(state.frontStudentsText));
+  const frontLimit = state.frontRows * state.cols;
+  const frontCapacity = activeSeats.filter(index => index < frontLimit).length;
+  const freeStudents = [...state.students];
+  const lockedSeats = new Map();
+  for (const index of activeSeats) {
+    if (!state.locks.has(index)) continue;
+    const name = state.locks.get(index);
+    const studentIndex = freeStudents.indexOf(name);
+    if (studentIndex < 0) continue;
+    lockedSeats.set(index, name);
+    freeStudents.splice(studentIndex, 1);
+  }
+  const freeSeats = activeSeats.filter(index => !lockedSeats.has(index));
+  const freeFrontSeats = freeSeats.filter(index => index < frontLimit);
+  const frontStudents = freeStudents.filter(name => frontNames.has(name));
+  const remainingStudents = freeStudents.filter(name => !frontNames.has(name));
+  const unknown = [...frontNames].filter(name => !state.students.includes(name));
+  const ambiguous = [...frontNames].filter(name => state.students.indexOf(name) !== state.students.lastIndexOf(name));
+  let error = '';
+  if (unknown.length) {
+    error = `학급 명단에 없는 이름을 확인하세요. ${unknown.join(', ')}`;
+  } else if (ambiguous.length) {
+    error = `동명이인은 두 명단에 번호를 붙여 구분하세요. ${ambiguous.join(', ')}`;
+  } else if (frontNames.size > frontCapacity) {
+    error = `앞자리 ${frontNames.size - frontCapacity}석이 부족합니다. 앞줄 범위나 희망자 명단을 조정하세요.`;
+  } else if (frontStudents.length > freeFrontSeats.length ||
+    [...lockedSeats].some(([index, name]) => index >= frontLimit && frontNames.has(name))) {
+    error = state.isSecretUnlocked
+      ? '앞자리 희망자와 고정석이 충돌합니다. 고정석 위치나 앞줄 범위를 조정하세요.'
+      : '현재 설정으로 희망자를 모두 앞에 배치할 수 없습니다. 앞줄 범위나 배치 설정을 확인하세요.';
+  }
+  return { lockedSeats, freeSeats, freeFrontSeats, frontStudents, remainingStudents, frontCount: frontNames.size, frontCapacity, error };
+}
+
 // 6. 상태 배지 업데이트
 function updateStatusIndicators() {
   const totalSeats = state.rows * state.cols;
   const activeCount = totalSeats - state.disabledSeats.size;
+  const plan = getSeatingPlan(getActiveSeatIndices());
+  DOM.frontRowStatus.textContent = plan.error || `희망 ${plan.frontCount}명 · 앞자리 ${plan.frontCapacity}석`;
+  DOM.frontRowStatus.classList.toggle('has-error', Boolean(plan.error));
+  DOM.frontStudents.setAttribute('aria-invalid', String(Boolean(plan.error)));
   
-  DOM.seatStatusBadge.textContent = `좌석 설정: ${activeCount}석 활성`;
+  DOM.seatStatusBadge.textContent = `사용 좌석 ${activeCount}석`;
   
   const studentCount = state.students.length;
   if (studentCount === 0) {
@@ -368,20 +437,31 @@ function updateStatusIndicators() {
     DOM.btnGroupShuffle.disabled = true;
     DOM.btnPickerStart.disabled = true;
   } else if (studentCount > activeCount) {
-    DOM.diffStatusBadge.textContent = `자리 부족 (${studentCount - activeCount}석 부족)`;
+    DOM.diffStatusBadge.textContent = `좌석 ${studentCount - activeCount}석 부족`;
     DOM.diffStatusBadge.className = "status-badge mismatch";
     DOM.btnShuffle.disabled = true;
     DOM.btnGroupShuffle.disabled = false; // 조짜기는 자리 제약 무관
     DOM.btnPickerStart.disabled = false;
   } else {
     const emptyCount = activeCount - studentCount;
-    DOM.diffStatusBadge.textContent = `안정적 (빈자리 ${emptyCount}석)`;
-    DOM.diffStatusBadge.className = "status-badge match";
-    DOM.btnShuffle.disabled = false;
+    DOM.diffStatusBadge.textContent = plan.error ? '앞자리 설정 확인' : `빈자리 ${emptyCount}석`;
+    DOM.diffStatusBadge.className = plan.error ? 'status-badge mismatch' : 'status-badge match';
+    DOM.btnShuffle.disabled = Boolean(plan.error) || state.isShuffling;
     DOM.btnGroupShuffle.disabled = false;
     DOM.btnPickerStart.disabled = false;
   }
 }
+
+function updateFrontPreferences() {
+  state.frontStudentsText = DOM.frontStudents.value;
+  const selected = [...DOM.frontRowInputs].find(input => input.checked);
+  state.frontRows = Number(selected.value);
+  buildGrid();
+  saveClassesToStorage();
+}
+
+DOM.frontStudents.addEventListener('input', updateFrontPreferences);
+DOM.frontRowInputs.forEach(input => input.addEventListener('change', updateFrontPreferences));
 
 // 7. 좌석 그리드 빌더
 // 교탁 시점 모드 시 캔버스 요소 순서(교탁/그리드/뒤쪽 표시)를 물리적으로 재배열
@@ -403,15 +483,18 @@ function applyFlippedLayout() {
   canvas.classList.toggle('flipped-view', state.isFlippedView);
   if (DOM.btnFlipView) {
     DOM.btnFlipView.classList.toggle('toggled-on', state.isFlippedView);
+    DOM.btnFlipView.setAttribute('aria-pressed', String(state.isFlippedView));
   }
 }
 
 function buildGrid() {
   const container = DOM.seatsGrid;
+  DOM.classroomCanvas.style.setProperty('--seat-columns', state.cols);
   container.innerHTML = '';
   container.style.gridTemplateColumns = `repeat(${state.cols}, 1fr)`;
 
   const totalSeats = state.rows * state.cols;
+  const showFrontZone = splitStudentNames(state.frontStudentsText).length > 0;
 
   // 표시 순서 계산: 교탁 시점 모드에서는 교탁에서 학생들을 바라본 모습이 되도록
   // 행(줄)과 열을 모두 뒤집어 180도 회전된 배치로 그림
@@ -432,49 +515,42 @@ function buildGrid() {
     seat.className = 'seat-card';
     seat.dataset.index = i;
     
-    if (state.disabledSeats.has(i)) {
-      seat.classList.add('disabled');
-      seat.innerHTML = `<span class="student-name">통 로</span>`;
-    } else {
-      seat.classList.add('active');
-      
+    const isAisle = state.disabledSeats.has(i);
+    seat.classList.add(isAisle ? 'disabled' : 'active');
+    seat.setAttribute('role', 'button');
+    seat.tabIndex = 0;
+
+    let label = '통로';
+    if (!isAisle) {
+      if (showFrontZone && i < state.frontRows * state.cols) seat.classList.add('front-zone');
+      const indexLabel = document.createElement('span');
+      indexLabel.className = 'seat-index';
+      indexLabel.textContent = `${row}줄 ${col}번`;
+      seat.appendChild(indexLabel);
+
       const lockedName = state.locks.get(i);
-      const isLockedValid = lockedName && state.students.includes(lockedName);
-      
-      // 관리자 모드가 켜져 있을 때만 고정된 이름을 노출하고 핀 표시
-      if (state.isSecretUnlocked && isLockedValid) {
-        seat.classList.add('assigned');
-        seat.innerHTML = `
-          <span class="seat-index">${row}열-${col}행</span>
-          <span class="student-name">${lockedName}</span>
-          ${getPinSVG()}
-        `;
-      } else {
-        if (lockedName && !state.students.includes(lockedName)) {
-          state.locks.delete(i);
-        }
-        
-        // 관리자 모드가 꺼진 평상시에는 배치표(assignment) 결과 유무에 따름
-        if (state.assignment[i] && state.students.includes(state.assignment[i])) {
-          seat.classList.add('assigned');
-          const isAssignedEmpty = state.assignment[i] === '빈자리' || state.assignment[i] === 'X';
-          
-          if (isAssignedEmpty) seat.classList.add('empty-seat');
-          
-          seat.innerHTML = `
-            <span class="seat-index">${row}열-${col}행</span>
-            <span class="student-name">${state.assignment[i]}</span>
-          `;
-        } else {
-          seat.innerHTML = `
-            <span class="seat-index">${row}열-${col}행</span>
-            <span class="student-name">좌 석</span>
-          `;
-        }
-      }
+      if (lockedName && !state.students.includes(lockedName)) state.locks.delete(i);
+      const showPin = state.isSecretUnlocked && state.locks.has(i);
+      const assignedName = state.assignment[i];
+      const isEmpty = assignedName === '빈자리' || assignedName === 'X';
+      const hasName = assignedName && state.students.includes(assignedName);
+      label = showPin ? lockedName : hasName ? assignedName : isEmpty ? '빈자리' : '좌석';
+      seat.classList.toggle('assigned', Boolean(showPin || hasName || isEmpty));
+      seat.classList.toggle('empty-seat', Boolean(!showPin && isEmpty));
+      if (showPin) seat.insertAdjacentHTML('beforeend', getPinSVG());
     }
-    
+    const nameLabel = document.createElement('span');
+    nameLabel.className = 'student-name';
+    nameLabel.textContent = label;
+    seat.appendChild(nameLabel);
+    seat.setAttribute('aria-label', `${row}줄 ${col}번, ${label}`);
     seat.addEventListener('click', () => handleSeatClick(i));
+    seat.addEventListener('keydown', event => {
+      if (event.target !== seat || !['Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      handleSeatClick(i);
+      if (!state.isSecretUnlocked) container.querySelector(`[data-index="${i}"]`)?.focus();
+    });
     container.appendChild(seat);
   }
 
@@ -482,8 +558,8 @@ function buildGrid() {
 
   // 저장 버튼 상태 동기화 (유효한 배치가 있는 경우에만 활성화)
   const hasAssignment = state.assignment && state.assignment.length > 0 && state.assignment.some(name => name && name !== '좌 석' && name !== 'X');
-  DOM.btnSaveStudent.disabled = !hasAssignment;
-  DOM.btnSaveTeacher.disabled = !hasAssignment;
+  DOM.btnSaveStudent.disabled = !hasAssignment || state.isShuffling;
+  DOM.btnSaveTeacher.disabled = !hasAssignment || state.isShuffling;
   if (!hasAssignment) closeSaveMenus();
   
   updateStatusIndicators();
@@ -505,6 +581,7 @@ function handleSeatClick(seatIndex) {
     // 인라인 셀렉트 드롭다운 생성
     const select = document.createElement('select');
     select.className = 'seat-lock-select';
+    select.setAttribute('aria-label', '이 좌석의 학생 또는 통로 설정');
     
     // 기본 플레이스홀더 옵션
     const optPlaceholder = document.createElement('option');
@@ -576,7 +653,7 @@ function handleSeatClick(seatIndex) {
     // 포커스 아웃 시 (사용자가 아무것도 선택 안 하고 다른 곳을 누르면 복원)
     select.addEventListener('blur', () => {
       setTimeout(() => {
-        buildGrid();
+        if (!state.isShuffling) buildGrid();
       }, 150);
     });
     
@@ -647,8 +724,13 @@ function updateGridDimensions(rows, cols) {
 }
 
 // 8. 프리셋 바인딩
-DOM.preset6x5.addEventListener('click', () => updateGridDimensions(5, 6));
-DOM.preset5x6.addEventListener('click', () => updateGridDimensions(6, 5));
+function applyRectangularPreset(rows, cols) {
+  state.disabledSeats.clear();
+  updateGridDimensions(rows, cols);
+}
+
+DOM.preset6x5.addEventListener('click', () => applyRectangularPreset(5, 6));
+DOM.preset5x6.addEventListener('click', () => applyRectangularPreset(6, 5));
 
 DOM.presetPairs.addEventListener('click', () => {
   state.rows = 5;
@@ -713,6 +795,10 @@ function switchMainTab(tabName) {
   if (state.isShuffling) return; // 작업 중 차단
   
   state.activeTab = tabName;
+  for (const name of ['seating', 'groups', 'picker']) {
+    document.getElementById(`tab-btn-${name}`).setAttribute('aria-pressed', String(name === tabName));
+  }
+  DOM.frontRowSettings.style.display = tabName === 'seating' ? '' : 'none';
   
   // 모든 탭 버튼 비활성화
   DOM.tabBtnSeating.classList.remove('active');
@@ -752,6 +838,20 @@ function switchMainTab(tabName) {
 // 10. 조 짜기 (모둠 편성) 비즈니스 로직
 // ============================================================================
 
+// 추첨이 끝날 때까지 학급, 명단, 인원수와 배치 조건을 같은 상태로 유지한다.
+function lockShuffleControls() {
+  state.isShuffling = true;
+  const controls = document.querySelectorAll(
+    '.sidebar-panel :is(button, input, select, textarea):enabled, .main-tab-btn:enabled, ' +
+    '#group-size:enabled, #picker-count:enabled, #btn-reset-layout:enabled, #btn-flip-view:enabled'
+  );
+  controls.forEach(control => { control.disabled = true; });
+  return () => {
+    controls.forEach(control => { control.disabled = false; });
+    state.isShuffling = false;
+  };
+}
+
 // 슬라이더 바인딩
 DOM.groupSize.addEventListener('input', (e) => {
   state.targetGroupSize = parseInt(e.target.value);
@@ -768,13 +868,11 @@ function runGroupShuffle() {
     return;
   }
   
-  state.isShuffling = true;
+  initAudio();
+  const releaseControls = lockShuffleControls();
   DOM.btnGroupShuffle.disabled = true;
   DOM.btnGroupSaveImage.disabled = true;
   DOM.btnGroupCopyText.disabled = true;
-  
-  // 오디오 초기화
-  initAudio();
   
   const S = state.targetGroupSize;
   // 균등 분배 알고리즘: 총 조 개수 G 계산
@@ -824,6 +922,7 @@ function runGroupShuffle() {
     tickCount++;
     if (tickCount >= 18) {
       clearInterval(state.shuffleInterval);
+      releaseControls();
       completeGroupShuffle(groupSizes);
     }
   }, 100);
@@ -834,8 +933,6 @@ function completeGroupShuffle(groupSizes) {
   const result = solveGroupAssignment(groupSizes);
   
   state.lastGroupAssignment = result.groups;
-  state.isShuffling = false;
-  
   renderGroupsList();
   playSuccessSound();
   
@@ -919,7 +1016,7 @@ function renderGroupsList() {
   if (state.lastGroupAssignment.length === 0) {
     DOM.groupsBoard.innerHTML = `
       <div class="group-empty-placeholder">
-        <p>명단을 입력하고 아래 [조 짜기 시작]을 누르세요!</p>
+        <p>한 조의 인원수를 정하고 ‘조 짜기’를 눌러 주세요.</p>
       </div>
     `;
     DOM.btnGroupSaveImage.disabled = true;
@@ -983,11 +1080,10 @@ function runPickerShuffle() {
     return;
   }
   
-  state.isShuffling = true;
+  initAudio();
+  const releaseControls = lockShuffleControls();
   DOM.btnPickerStart.disabled = true;
   DOM.btnPickerCopyText.disabled = true;
-  
-  initAudio();
   
   // 추첨판 비우기 및 롤링 셔플용 임시 골든 티켓 스켈레톤 생성
   DOM.pickerBoard.innerHTML = '';
@@ -1020,6 +1116,7 @@ function runPickerShuffle() {
     tickCount++;
     if (tickCount >= 18) { // 약 1.5초 (85ms * 18 = 1.53s)
       clearInterval(state.shuffleInterval);
+      releaseControls();
       completePickerShuffle();
     }
   }, 85);
@@ -1032,8 +1129,6 @@ function completePickerShuffle() {
   
   const winners = pool.slice(0, state.targetPickerCount);
   state.lastPickerAssignment = winners;
-  
-  state.isShuffling = false;
   
   // 결과물 렌더링
   DOM.pickerBoard.innerHTML = '';
@@ -1067,7 +1162,7 @@ function renderPickerList() {
   if (!state.lastPickerAssignment || state.lastPickerAssignment.length === 0) {
     DOM.pickerBoard.innerHTML = `
       <div class="group-empty-placeholder" style="width: 100%;">
-        <p>왼쪽에서 학생 명단을 등록하고 아래 [추첨 시작]을 누르세요!</p>
+        <p>뽑을 인원수를 정하고 ‘추첨 시작’을 눌러 주세요.</p>
       </div>
     `;
     if (DOM.btnPickerCopyText) DOM.btnPickerCopyText.disabled = true;
@@ -1113,12 +1208,7 @@ function copyPickerText() {
 function runShuffle() {
   if (state.isShuffling) return;
   
-  const activeSeats = [];
-  const totalSeats = state.rows * state.cols;
-  for (let i = 0; i < totalSeats; i++) {
-    if (!state.disabledSeats.has(i)) activeSeats.push(i);
-  }
-  
+  const activeSeats = getActiveSeatIndices();
   if (state.students.length === 0) {
     showToast("학생 명단을 먼저 입력하세요.", "danger");
     return;
@@ -1129,13 +1219,19 @@ function runShuffle() {
     return;
   }
   
-  state.isShuffling = true;
+  const result = solveSeatingAssignment(activeSeats);
+  if (!result.success) {
+    showToast(result.error, 'warning');
+    return;
+  }
+
+  initAudio();
+  const releaseControls = lockShuffleControls();
+  if (DOM.seatsGrid.querySelector('.seat-lock-select')) buildGrid();
   DOM.btnShuffle.disabled = true;
   DOM.btnSaveStudent.disabled = true;
   DOM.btnSaveTeacher.disabled = true;
   closeSaveMenus();
-
-  initAudio();
 
   let tickCount = 0;
   state.shuffleInterval = setInterval(() => {
@@ -1170,17 +1266,14 @@ function runShuffle() {
     tickCount++;
     if (tickCount >= 18) {
       clearInterval(state.shuffleInterval);
-      completeShuffle(activeSeats);
+      releaseControls();
+      completeShuffle(result.assignment);
     }
   }, 100);
 }
 
-function completeShuffle(activeSeats) {
-  const result = solveSeatingAssignment(activeSeats);
-  
-  state.assignment = result.assignment;
-  state.isShuffling = false;
-  
+function completeShuffle(assignment) {
+  state.assignment = assignment;
   buildGrid();
   
   const seatCards = document.querySelectorAll('.seat-card');
@@ -1206,16 +1299,7 @@ function completeShuffle(activeSeats) {
   
   playSuccessSound();
   
-  if (result.success) {
-    showToast("성공적으로 자리 배치를 완료했습니다!");
-  } else {
-    showToast("자리 배치를 완료했습니다.", "success");
-  }
-  
-  DOM.btnShuffle.disabled = false;
-  DOM.btnSaveStudent.disabled = false;
-  DOM.btnSaveTeacher.disabled = false;
-
+  showToast("자리 배치를 완료했습니다.");
   saveClassesToStorage();
 }
 
@@ -1229,55 +1313,35 @@ function shuffleArray(array) {
 
 // 자리 배정 CS 엔진
 function solveSeatingAssignment(activeSeats) {
-  const lockedEntries = [];
-  const lockedStudents = new Set();
-  
-  state.locks.forEach((name, seatIdx) => {
-    if (state.students.includes(name) && activeSeats.includes(seatIdx)) {
-      lockedEntries.push([seatIdx, name]);
-      lockedStudents.add(name);
-    }
-  });
-  
-  const freeStudents = state.students.filter(name => !lockedStudents.has(name));
-  const lockedSeatsSet = new Set(lockedEntries.map(e => e[0]));
-  const freeSeats = activeSeats.filter(seatIdx => !lockedSeatsSet.has(seatIdx));
-  
-  const shuffledPool = [...freeStudents];
-  while (shuffledPool.length < freeSeats.length) {
-    shuffledPool.push('빈자리');
+  const plan = getSeatingPlan(activeSeats);
+  if (plan.error) return { success: false, error: plan.error };
+  if (state.students.length > activeSeats.length) {
+    return { success: false, error: '학생 수에 맞게 좌석을 추가하세요.' };
   }
-  
-  let bestAssignment = null;
-  let minViolations = Infinity;
-  const maxRetries = 400;
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const tempPool = [...shuffledPool];
-    shuffleArray(tempPool);
-    
-    const tempAssignment = new Array(state.rows * state.cols).fill(null);
-    
-    lockedEntries.forEach(([seatIdx, name]) => {
-      tempAssignment[seatIdx] = name;
+
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const assignment = new Array(state.rows * state.cols).fill(null);
+    plan.lockedSeats.forEach((name, index) => { assignment[index] = name; });
+
+    const frontSeats = [...plan.freeFrontSeats];
+    shuffleArray(frontSeats);
+    plan.frontStudents.forEach((name, i) => { assignment[frontSeats[i]] = name; });
+
+    const remainingSeats = plan.freeSeats.filter(index => assignment[index] === null);
+    shuffleArray(remainingSeats);
+    remainingSeats.forEach((index, i) => {
+      assignment[index] = plan.remainingStudents[i] ?? '빈자리';
     });
-    
-    freeSeats.forEach((seatIdx, index) => {
-      tempAssignment[seatIdx] = tempPool[index];
-    });
-    
-    const violations = countSeparationViolations(tempAssignment);
-    if (violations === 0) {
-      return { success: true, assignment: tempAssignment };
-    }
-    
-    if (violations < minViolations) {
-      minViolations = violations;
-      bestAssignment = tempAssignment;
+
+    if (countSeparationViolations(assignment) === 0) {
+      return { success: true, assignment };
     }
   }
-  
-  return { success: false, assignment: bestAssignment };
+
+  const error = state.isSecretUnlocked
+    ? '거리두기와 좌석 설정을 함께 만족하는 배치를 찾지 못했습니다. 설정을 확인한 뒤 다시 시도하세요.'
+    : '현재 설정에 맞는 배치를 찾지 못했습니다. 좌석 구성을 조정하거나 다시 시도하세요.';
+  return { success: false, error };
 }
 
 function countSeparationViolations(assignment) {
@@ -1334,6 +1398,8 @@ DOM.btnSaveClass.addEventListener('click', () => {
   // 새 학급 정보 생성
   state.classes[name] = {
     studentsText: DOM.studentList.value,
+    frontRows: state.frontRows,
+    frontStudentsText: state.frontStudentsText,
     disabledSeats: new Set(state.disabledSeats),
     locks: new Map(state.locks),
     separatedPairs: [...state.separatedPairs],
@@ -1397,7 +1463,7 @@ DOM.btnThemeToggle.addEventListener('click', () => {
 
 function initTheme() {
   const savedTheme = localStorage.getItem('seat_arranger_active_theme');
-  if (savedTheme === 'light') {
+  if (savedTheme !== 'dark') {
     document.body.classList.add('light-theme');
     state.theme = 'light';
   } else {
@@ -1412,6 +1478,7 @@ function initTheme() {
 // ============================================================================
 
 function toggleSecretMode() {
+  if (state.isShuffling) return;
   state.isSecretUnlocked = !state.isSecretUnlocked;
   
   if (state.isSecretUnlocked) {
@@ -1537,7 +1604,7 @@ function downloadDataUrl(dataUrl, filename) {
 }
 
 function getCaptureBgColor() {
-  return state.theme === 'light' ? '#faf8f3' : '#141312';
+  return getComputedStyle(document.body).backgroundColor;
 }
 
 // 저장 옵션 드롭업 메뉴 열기/닫기
@@ -1719,6 +1786,8 @@ function initClasses() {
         const cl = parsed[name];
         state.classes[name] = {
           studentsText: cl.studentsText,
+          frontRows: cl.frontRows === 2 ? 2 : 1,
+          frontStudentsText: typeof cl.frontStudentsText === 'string' ? cl.frontStudentsText : '',
           disabledSeats: new Set(cl.disabledSeats || []),
           locks: new Map(cl.locks || []),
           separatedPairs: cl.separatedPairs || [],

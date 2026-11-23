@@ -17,7 +17,8 @@ const state = {
   frontRows: 1,
   frontStudentsText: '',
   disabledSeats: new Set(),
-  locks: new Map(), // seatIndex -> studentName
+  publicLocks: new Map(), // 공개 지정석
+  locks: new Map(), // 비밀 고정석
   separatedPairs: [], // [[s1, s2], ...]
   assignment: [], // 직전 자리 배치
   lastGroupAssignment: [], // 직전 소그룹 조 편성 [[s1, s2, ...], [s3, s4, ...]]
@@ -96,6 +97,14 @@ const DOM = {
   
   // 1) 자리배치 캔버스 영역
   seatsGrid: document.getElementById('seats-grid'),
+  btnSeatAssign: document.getElementById('btn-seat-assign'),
+  publicSeatDialog: document.getElementById('public-seat-dialog'),
+  publicSeatForm: document.getElementById('public-seat-form'),
+  publicSeatPosition: document.getElementById('public-seat-position'),
+  publicSeatStudent: document.getElementById('public-seat-student'),
+  publicSeatHint: document.getElementById('public-seat-hint'),
+  publicSeatClear: document.getElementById('btn-public-seat-clear'),
+  publicSeatSave: document.getElementById('btn-public-seat-save'),
   classroomCanvas: document.getElementById('classroom-canvas'),
   btnShuffle: document.getElementById('btn-shuffle'),
   btnSaveStudent: document.getElementById('btn-save-student'),
@@ -223,6 +232,14 @@ function showToast(message, type = 'success') {
   }, 3500);
 }
 
+const usageHelp = document.getElementById('usage-help-dialog');
+document.getElementById('btn-open-help').addEventListener('click', () => {
+  usageHelp.showModal();
+});
+document.getElementById('btn-close-help').addEventListener('click', () => {
+  usageHelp.close();
+});
+
 // 5. 학급(그룹) 관리 로직
 const CLASSES_KEY = 'seat_arranger_classes_package';
 const QUICK_ROSTER_KEY = 'seat_arranger_quick_roster';
@@ -251,6 +268,7 @@ function saveClassesToStorage() {
     frontRows: state.frontRows,
     frontStudentsText: state.frontStudentsText,
     disabledSeats: [...state.disabledSeats],
+    publicLocks: [...state.publicLocks],
     locks: [...state.locks],
     separatedPairs: state.separatedPairs,
     lastAssignment: state.assignment,
@@ -292,6 +310,7 @@ function loadClassData(className) {
   state.frontRows = cl.frontRows === 2 ? 2 : 1;
   state.frontStudentsText = cl.frontStudentsText || '';
   state.disabledSeats = new Set(cl.disabledSeats || []);
+  state.publicLocks = new Map(cl.publicLocks || []);
   state.locks = new Map(cl.locks || []);
   state.separatedPairs = cl.separatedPairs || [];
   state.assignment = cl.lastAssignment || [];
@@ -365,6 +384,9 @@ function parseStudents(shouldSave = true) {
   const names = splitStudentNames(DOM.studentList.value);
   const changed = names.length !== state.students.length || names.some((name, i) => name !== state.students[i]);
   state.students = names;
+  for (const [index, name] of state.publicLocks) {
+    if (!names.includes(name) || names.indexOf(name) !== names.lastIndexOf(name)) state.publicLocks.delete(index);
+  }
   
   DOM.studentCount.textContent = state.students.length;
   
@@ -411,13 +433,16 @@ function getSeatingPlan(activeSeats) {
   const frontCapacity = activeSeats.filter(index => index < frontLimit).length;
   const freeStudents = [...state.students];
   const lockedSeats = new Map();
-  for (const index of activeSeats) {
-    if (!state.locks.has(index)) continue;
-    const name = state.locks.get(index);
-    const studentIndex = freeStudents.indexOf(name);
-    if (studentIndex < 0) continue;
-    lockedSeats.set(index, name);
-    freeStudents.splice(studentIndex, 1);
+  // 공개 지정이 겹치는 비밀 고정석은 이번 배치에서만 제외한다.
+  for (const pins of [state.publicLocks, state.locks]) {
+    for (const index of activeSeats) {
+      if (!pins.has(index) || lockedSeats.has(index)) continue;
+      const name = pins.get(index);
+      const studentIndex = freeStudents.indexOf(name);
+      if (studentIndex < 0) continue;
+      lockedSeats.set(index, name);
+      freeStudents.splice(studentIndex, 1);
+    }
   }
   const freeSeats = activeSeats.filter(index => !lockedSeats.has(index));
   const freeFrontSeats = freeSeats.filter(index => index < frontLimit);
@@ -432,6 +457,8 @@ function getSeatingPlan(activeSeats) {
     error = `동명이인은 두 명단에 번호를 붙여 구분하세요. ${ambiguous.join(', ')}`;
   } else if (frontNames.size > frontCapacity) {
     error = `앞자리 ${frontNames.size - frontCapacity}석이 부족합니다. 앞줄 범위나 희망자 명단을 조정하세요.`;
+  } else if ([...state.publicLocks].some(([index, name]) => index >= frontLimit && frontNames.has(name))) {
+    error = '앞자리 희망 학생의 지정석이 앞줄 밖에 있습니다. 좌석 지정이나 앞자리 범위를 바꿔 주세요.';
   } else if (frontStudents.length > freeFrontSeats.length ||
     [...lockedSeats].some(([index, name]) => index >= frontLimit && frontNames.has(name))) {
     error = state.isSecretUnlocked
@@ -511,12 +538,15 @@ function applyFlippedLayout() {
 }
 
 function buildGrid() {
+  cancelPendingSeatClick();
   const container = DOM.seatsGrid;
   DOM.classroomCanvas.style.setProperty('--seat-columns', state.cols);
   container.innerHTML = '';
   container.style.gridTemplateColumns = `repeat(${state.cols}, 1fr)`;
 
   const totalSeats = state.rows * state.cols;
+  const publicNames = new Set(state.publicLocks.values());
+  const showSecret = state.isSecretUnlocked && !document.body.classList.contains('html2canvas-capturing');
   const showFrontZone = splitStudentNames(state.frontStudentsText).length > 0;
 
   // 표시 순서 계산: 교탁 시점 모드에서는 교탁에서 학생들을 바라본 모습이 되도록
@@ -553,26 +583,44 @@ function buildGrid() {
 
       const lockedName = state.locks.get(i);
       if (lockedName && !state.students.includes(lockedName)) state.locks.delete(i);
-      const showPin = state.isSecretUnlocked && state.locks.has(i);
+      const publicName = state.publicLocks.get(i);
+      if (publicName) {
+        seat.classList.add('public-fixed');
+        const mark = document.createElement('span');
+        mark.className = 'public-seat-badge';
+        mark.textContent = '지정석';
+        indexLabel.append(' ', mark);
+      }
+      const showPin = showSecret && !publicName && state.locks.has(i) && !publicNames.has(lockedName);
       const assignedName = state.assignment[i];
       const isEmpty = assignedName === '빈자리' || assignedName === 'X';
       const hasName = assignedName && state.students.includes(assignedName);
-      label = showPin ? lockedName : hasName ? assignedName : isEmpty ? '빈자리' : '좌석';
-      seat.classList.toggle('assigned', Boolean(showPin || hasName || isEmpty));
-      seat.classList.toggle('empty-seat', Boolean(!showPin && isEmpty));
+      label = publicName || (showPin ? lockedName : hasName ? assignedName : isEmpty ? '빈자리' : '좌석');
+      seat.classList.toggle('assigned', Boolean(publicName || showPin || hasName || isEmpty));
+      seat.classList.toggle('empty-seat', Boolean(!publicName && !showPin && isEmpty));
       if (showPin) seat.insertAdjacentHTML('beforeend', getPinSVG());
     }
     const nameLabel = document.createElement('span');
     nameLabel.className = 'student-name';
     nameLabel.textContent = label;
     seat.appendChild(nameLabel);
-    seat.setAttribute('aria-label', `${row}줄 ${col}번, ${label}`);
-    seat.addEventListener('click', () => handleSeatClick(i));
-    seat.addEventListener('keydown', event => {
-      if (event.target !== seat || !['Enter', ' '].includes(event.key)) return;
+    const suffix = !isAisle && state.publicLocks.has(i) ? ', 지정석' : '';
+    seat.setAttribute('aria-label', `${row}줄 ${col}번, ${label}${suffix}`);
+    seat.addEventListener('click', event => onSeatClick(event, i));
+    seat.addEventListener('dblclick', event => {
+      if (state.isSecretUnlocked || state.isShuffling || DOM.publicSeatDialog.open) return;
       event.preventDefault();
-      handleSeatClick(i);
-      if (!state.isSecretUnlocked) container.querySelector(`[data-index="${i}"]`)?.focus();
+      openPublicSeatDialog(i);
+    });
+    seat.addEventListener('keydown', event => {
+      if (state.isShuffling || event.target !== seat || !['Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      if (!state.isSecretUnlocked && event.key === 'Enter') {
+        openPublicSeatDialog(i);
+      } else {
+        handleSeatClick(i);
+        if (!state.isSecretUnlocked && !DOM.publicSeatDialog.open) container.querySelector(`[data-index="${i}"]`)?.focus();
+      }
     });
     container.appendChild(seat);
   }
@@ -591,6 +639,125 @@ function buildGrid() {
 function getPinSVG() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pin-indicator"><line x1="12" x2="12" y1="17" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.5A2 2 0 0 1 15 9.26V5a3 3 0 0 0-6 0v4.26a2 2 0 0 1-.78 1.24l-2.78 3.5a2 2 0 0 0-.44 1.24Z"/></svg>`;
 }
+
+// 두 번째 클릭이 도착하기 전에 좌석 DOM을 다시 만들면 브라우저의 더블클릭 대상이 사라진다.
+let pendingSeatClick = null;
+let returnToSeat = false;
+
+function cancelPendingSeatClick() {
+  if (pendingSeatClick) clearTimeout(pendingSeatClick.timer);
+  pendingSeatClick = null;
+}
+
+function flushPendingSeatClick() {
+  if (!pendingSeatClick) return;
+  const index = pendingSeatClick.index;
+  cancelPendingSeatClick();
+  handleSeatClick(index);
+}
+
+function onSeatClick(event, index) {
+  if (state.isShuffling || DOM.publicSeatDialog.open) return;
+  if (state.isSecretUnlocked || state.publicLocks.has(index) || event.detail === 0) {
+    handleSeatClick(index);
+    return;
+  }
+  if (event.detail > 1 || pendingSeatClick?.index === index) {
+    openPublicSeatDialog(index);
+    return;
+  }
+  // 서로 다른 좌석을 빠르게 눌러도 첫 번째 통로 변경을 잃지 않는다.
+  flushPendingSeatClick();
+  pendingSeatClick = { index, timer: setTimeout(flushPendingSeatClick, 500) };
+}
+
+document.addEventListener('pointerdown', event => {
+  if (pendingSeatClick && !event.target.closest('.seat-card')) flushPendingSeatClick();
+});
+
+function updatePublicSeatForm() {
+  const index = Number(DOM.publicSeatPosition.value);
+  const name = state.publicLocks.get(index) || '';
+  DOM.publicSeatStudent.value = name;
+  DOM.publicSeatClear.hidden = !name;
+  updatePublicSeatHint();
+}
+
+function updatePublicSeatHint() {
+  const index = Number(DOM.publicSeatPosition.value);
+  const name = DOM.publicSeatStudent.value;
+  DOM.publicSeatSave.disabled = !name;
+  const notes = [];
+  if (!state.students.length) notes.push('명단에 학생 이름을 먼저 입력해 주세요.');
+  else if (state.students.some((student, i) => state.students.indexOf(student) !== i)) {
+    notes.push('동명이인은 명단에 번호를 붙여 구분한 뒤 지정할 수 있습니다.');
+  }
+  if (state.disabledSeats.has(index)) notes.push('학생을 지정하면 이 통로가 좌석으로 바뀝니다.');
+  if (name && state.publicLocks.get(index) !== name) {
+    if ([...state.publicLocks.values()].includes(name)) notes.push('이 학생의 지정석이 선택한 좌석으로 이동합니다.');
+    if (state.assignment.length) notes.push('지정을 바꾸면 다시 배치해야 합니다.');
+  }
+  DOM.publicSeatHint.textContent = notes.join(' ');
+}
+
+function openPublicSeatDialog(index) {
+  if (state.isShuffling || DOM.publicSeatDialog.open) return;
+  cancelPendingSeatClick();
+  returnToSeat = Number.isInteger(index);
+  const selectedIndex = returnToSeat ? index : (getActiveSeatIndices()[0] ?? 0);
+  DOM.publicSeatPosition.replaceChildren();
+  for (let i = 0; i < state.rows * state.cols; i++) {
+    const location = `${Math.floor(i / state.cols) + 1}줄 ${i % state.cols + 1}번`;
+    const name = state.publicLocks.get(i);
+    const suffix = name ? ` · ${name} 지정석` : state.disabledSeats.has(i) ? ' · 통로' : '';
+    DOM.publicSeatPosition.add(new Option(location + suffix, String(i)));
+  }
+  DOM.publicSeatPosition.value = String(selectedIndex);
+  DOM.publicSeatStudent.replaceChildren(new Option('학생 선택', ''));
+  for (const student of new Set(state.students)) {
+    const ambiguous = state.students.indexOf(student) !== state.students.lastIndexOf(student);
+    const option = new Option(ambiguous ? `${student} (동명이인)` : student, student);
+    option.disabled = ambiguous;
+    DOM.publicSeatStudent.add(option);
+  }
+  updatePublicSeatForm();
+  DOM.publicSeatDialog.showModal();
+  (returnToSeat ? DOM.publicSeatStudent : DOM.publicSeatPosition).focus();
+}
+
+function savePublicSeat(name) {
+  const index = Number(DOM.publicSeatPosition.value);
+  if (name && state.publicLocks.get(index) === name) {
+    DOM.publicSeatDialog.close();
+    return;
+  }
+  if (name) {
+    if (!state.students.includes(name) || state.students.indexOf(name) !== state.students.lastIndexOf(name)) return;
+    for (const [oldIndex, student] of state.publicLocks) {
+      if (student === name) state.publicLocks.delete(oldIndex);
+    }
+    state.publicLocks.set(index, name);
+    state.disabledSeats.delete(index);
+  } else {
+    state.publicLocks.delete(index);
+  }
+  state.assignment = [];
+  DOM.publicSeatDialog.close();
+  buildGrid();
+  saveClassesToStorage();
+  if (returnToSeat) DOM.seatsGrid.querySelector(`[data-index="${index}"]`)?.focus();
+  showToast(name ? `${name} 학생의 좌석을 지정했습니다.` : '좌석 지정을 해제했습니다.');
+}
+
+DOM.btnSeatAssign.addEventListener('click', () => openPublicSeatDialog());
+DOM.publicSeatPosition.addEventListener('change', updatePublicSeatForm);
+DOM.publicSeatStudent.addEventListener('change', updatePublicSeatHint);
+DOM.publicSeatForm.addEventListener('submit', event => {
+  event.preventDefault();
+  if (DOM.publicSeatStudent.value) savePublicSeat(DOM.publicSeatStudent.value);
+});
+DOM.publicSeatClear.addEventListener('click', () => savePublicSeat(''));
+document.getElementById('btn-public-seat-cancel').addEventListener('click', () => DOM.publicSeatDialog.close());
 
 // 좌석 클릭 처리
 function handleSeatClick(seatIndex) {
@@ -632,6 +799,7 @@ function handleSeatClick(seatIndex) {
       optToggleType.value = '__disable__';
       optToggleType.textContent = '🚧 통로로 변경';
     }
+    optToggleType.disabled = state.publicLocks.has(seatIndex);
     select.appendChild(optToggleType);
     
     // 학생 명단 옵션
@@ -702,24 +870,34 @@ function handleSeatClick(seatIndex) {
     return;
   }
   
-  // 일반 상태: 통로 토글
+  // 공개 지정석은 한 번 눌러도 통로가 되지 않도록 편집창으로 연결한다.
+  if (state.publicLocks.has(seatIndex)) {
+    openPublicSeatDialog(seatIndex);
+    return;
+  }
   if (state.disabledSeats.has(seatIndex)) {
     state.disabledSeats.delete(seatIndex);
   } else {
     state.disabledSeats.add(seatIndex);
-    if (state.locks.has(seatIndex)) {
-      state.locks.delete(seatIndex);
-    }
   }
-  
+  state.assignment = [];
   buildGrid();
   saveClassesToStorage();
 }
 
 // 그리드 차원 조절 핸들러
 function updateGridDimensions(rows, cols) {
+  const oldCols = state.cols;
   state.rows = rows;
   state.cols = cols;
+  const remapped = new Map();
+  for (const [index, student] of state.publicLocks) {
+    const row = Math.floor(index / oldCols);
+    const col = index % oldCols;
+    const next = row * cols + col;
+    if (row < rows && col < cols && !state.disabledSeats.has(next)) remapped.set(next, student);
+  }
+  state.publicLocks = remapped;
   
   DOM.gridRows.value = rows;
   DOM.gridCols.value = cols;
@@ -756,24 +934,20 @@ DOM.preset6x5.addEventListener('click', () => applyRectangularPreset(5, 6));
 DOM.preset5x6.addEventListener('click', () => applyRectangularPreset(6, 5));
 
 DOM.presetPairs.addEventListener('click', () => {
-  state.rows = 5;
-  state.cols = 8;
   state.disabledSeats.clear();
-  for (let r = 0; r < state.rows; r++) {
-    state.disabledSeats.add(r * state.cols + 2); // 3열 통로
-    state.disabledSeats.add(r * state.cols + 5); // 6열 통로
+  for (let r = 0; r < 5; r++) {
+    state.disabledSeats.add(r * 8 + 2); // 3열 통로
+    state.disabledSeats.add(r * 8 + 5); // 6열 통로
   }
   updateGridDimensions(5, 8);
   showToast("3분단 짝꿍 배치가 완성되었습니다.");
 });
 
 DOM.presetUShape.addEventListener('click', () => {
-  state.rows = 5;
-  state.cols = 6;
   state.disabledSeats.clear();
   for (let r = 1; r < 4; r++) {
     for (let c = 1; c < 5; c++) {
-      state.disabledSeats.add(r * state.cols + c);
+      state.disabledSeats.add(r * 6 + c);
     }
   }
   updateGridDimensions(5, 6);
@@ -782,6 +956,7 @@ DOM.presetUShape.addEventListener('click', () => {
 
 DOM.btnResetLayout.addEventListener('click', () => {
   state.disabledSeats.clear();
+  state.publicLocks.clear();
   state.locks.clear();
   state.assignment = [];
   buildGrid();
@@ -817,6 +992,7 @@ DOM.tabBtnPicker.addEventListener('click', () => switchMainTab('picker'));
 function switchMainTab(tabName) {
   if (state.isShuffling) return; // 작업 중 차단
   
+  cancelPendingSeatClick();
   state.activeTab = tabName;
   for (const name of ['seating', 'groups', 'picker']) {
     document.getElementById(`tab-btn-${name}`).setAttribute('aria-pressed', String(name === tabName));
@@ -866,7 +1042,7 @@ function lockShuffleControls() {
   state.isShuffling = true;
   const controls = document.querySelectorAll(
     '.sidebar-panel :is(button, input, select, textarea):enabled, .main-tab-btn:enabled, ' +
-    '#group-size:enabled, #picker-count:enabled, #btn-reset-layout:enabled, #btn-flip-view:enabled'
+    '#group-size:enabled, #picker-count:enabled, #btn-reset-layout:enabled, #btn-flip-view:enabled, #btn-seat-assign:enabled'
   );
   controls.forEach(control => { control.disabled = true; });
   return () => {
@@ -1218,6 +1394,8 @@ function copyPickerText() {
 
 function runShuffle() {
   if (state.isShuffling) return;
+  flushPendingSeatClick();
+  if (DOM.publicSeatDialog.open) return;
   
   const activeSeats = getActiveSeatIndices();
   if (state.students.length === 0) {
@@ -1261,12 +1439,10 @@ function runShuffle() {
       
       card.classList.add('shuffle-roll');
       
-      const lockedName = state.locks.get(idx);
-      const isLockedValid = lockedName && state.students.includes(lockedName);
-      
-      // 관리자 모드가 활성화되어 있을 때만 셔플 중 고정 상태를 즉시 노출
-      if (state.isSecretUnlocked && isLockedValid) {
-        card.querySelector('.student-name').textContent = lockedName;
+      const publicName = state.publicLocks.get(idx);
+      const visibleSecret = state.isSecretUnlocked && state.locks.get(idx) === result.assignment[idx];
+      if (publicName || visibleSecret) {
+        card.querySelector('.student-name').textContent = result.assignment[idx];
         card.classList.remove('shuffle-roll');
       } else {
         const randName = tempShuffled.pop();
@@ -1720,8 +1896,8 @@ async function saveSeatingChart(isTeacherView, format) {
   } finally {
     // 저장 전 보기 상태로 복원
     state.isFlippedView = prevFlipped;
-    buildGrid();
     document.body.classList.remove('html2canvas-capturing');
+    buildGrid();
   }
 }
 

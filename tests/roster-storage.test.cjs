@@ -39,11 +39,15 @@ test('a fresh roster can persist without creating a named class', () => {
   app.roster.value = '가람\n나은';
   app.state.frontRows = 2;
   app.state.frontStudentsText = '나은';
+  app.state.publicLocks.set(3, '나은');
+  app.state.locks.set(7, '가람');
   app.context.saveClassesToStorage();
   const draft = JSON.parse(app.items.get(quickKey));
   assert.equal(draft.studentsText, '가람\n나은');
   assert.equal(draft.frontRows, 2);
   assert.equal(draft.frontStudentsText, '나은');
+  assert.deepEqual(draft.publicLocks, [[3, '나은']]);
+  assert.deepEqual(draft.locks, [[7, '가람']]);
   assert.deepEqual(Object.keys(JSON.parse(app.items.get(classKey) || '{}')), []);
   assert.equal(openStorage(Object.fromEntries(app.items)).state.activeClass, '');
 });
